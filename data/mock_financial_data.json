@@ -1,0 +1,11 @@
+{
+  "assets": {"cash": 1000, "bank": 95000},
+  "liabilities": {"loans": 15000, "credit_card": 4000},
+  "transactions": [
+    {"date": "2025-10-01", "desc": "Dining Out", "amount": 1200},
+    {"date": "2025-10-02", "desc": "Grocery", "amount": 2000}
+  ],
+  "investments": {"mutual_funds": 20000, "stocks": 12000},
+  "epf": {"balance": 70000},
+  "creditScore": 780
+}
