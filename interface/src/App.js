@@ -10,7 +10,7 @@ import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Button from "@mui/material/Button";
 import { AuthProvider, useAuth } from "./AuthContext";
-import Login from "../Front/Login";
+import Login from "./Login";
 import Register from "./Register";
 
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -58,7 +58,7 @@ function MainApp({ toggleDarkMode, darkMode }) {
     <Container maxWidth="sm">
       <Paper elevation={4} sx={{ p: 4, mt: 6, borderRadius: 4, bgcolor: "background.paper" }}>
         <Box display="flex" alignItems="center" mb={2}>
-          <img src="/logo192.png" alt="logo" height={40} style={{ marginRight: 16 }} />
+          <img src="/logo.png" alt="logo" height={40} style={{ marginRight: 16 }} />
           <Typography variant="h4" color="primary">Finance AI Assistant</Typography>
         </Box>
 

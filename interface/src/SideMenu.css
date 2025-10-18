@@ -1,0 +1,60 @@
+/* Hamburger Icon */
+.hamburger {
+  font-size: 30px;
+  cursor: pointer;
+  position: fixed;
+  top: 20px;
+  right: 20px; /* Change to left:20px for left-side menu */
+  z-index: 1002;
+}
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+
+/* Side Menu */
+.side-menu {
+  position: fixed;
+  top: 0;
+  right: -250px; /* Hidden by default */
+  width: 250px;
+  height: 100%;
+  background-color: #222;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 60px;
+  transition: right 0.3s ease;
+  z-index: 1001;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+}
+
+/* Show menu */
+.side-menu.show {
+  right: 0;
+}
+
+/* Buttons inside menu */
+.side-menu button {
+  margin: 15px 0;
+  padding: 12px 20px;
+  width: 80%;
+  background-color: #444;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: background-color 0.2s ease;
+}
+
+.side-menu button:hover {
+  background-color: #666;
+}
