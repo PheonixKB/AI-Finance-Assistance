@@ -1,70 +1,23 @@
-# Getting Started with Create React App
+# AI-Finance-Assistance (updated demo)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is an updated, minimal demo fork of the project you uploaded. Changes made:
+- Backend: `main.py` rewritten to include a clearer FastAPI structure, permission filtering, input validation, and a simple builtin insights generator. Reads mock data from `data/mock_financial_data.json`.
+- Frontend: React components fully implemented (`src/App.js`, `ChatComponent.js`, `InsightsDisplay.js`, `PermissionToggle.js`, `apiService.js`, `index.js`) using MUI composition. These components are minimal but runnable after installing dependencies.
 
-## Available Scripts
+How to run locally (backend):
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install fastapi uvicorn
+python main.py
+```
 
-In the project directory, you can run:
+How to run frontend (create-react-app / Vite):
+- Place the `src/` folder into a React project (or run `npx create-react-app`) and start the dev server.
+- Set `REACT_APP_API_BASE` if your backend runs on a different host than the dev server proxy.
 
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Notes & next steps (recommended):
+- Replace the demo insights with an actual AI integration (OpenAI, etc.) and implement secure server-side API key handling.
+- Add unit tests and type checking (mypy / eslint).
+- Lock down CORS to known origins in production.
+- Add authentication before exposing potentially sensitive data.
