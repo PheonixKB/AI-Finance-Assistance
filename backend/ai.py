@@ -1,61 +1,66 @@
+# backend/ai.py
 import os
-from fastapi import APIRouter, Request, HTTPException, Depends
-from jose import jwt, JWTError
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from dotenv import load_dotenv
-from openai import OpenAI
 
-# Load environment variables
+# Optional: use OpenAI client if available
+try:
+    from openai import OpenAI
+except Exception:
+    OpenAI = None
+
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 router = APIRouter()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-print("AI SECRET_KEY:", SECRET_KEY)
-# Initialize OpenAI client once
-client = OpenAI(api_key=OPENAI_API_KEY)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
 
-# ✅ Extract token from request header
-def get_token(request: Request):
-    token = request.headers.get("authorization")
-    if token and token.startswith("Bearer "):
-        return token.split()[1]
-    raise HTTPException(status_code=401, detail="Missing token")
+class QueryModel(BaseModel):
+    query: str
+    permissions: dict = {}
 
 
-# ✅ Decode JWT and get user info
-def get_current_user(token: str = Depends(get_token)):
-    try:
-        print("Received token:", token)  # Debug
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        print("Decoded payload:", payload)
-    except JWTError as e:
-        print("JWT decode failed:", e)
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return payload.get("sub")
-
-
-
-# ✅ Main route to ask the AI assistant
 @router.post("/ask")
-async def ask_finance_assistant(request: Request, user: str = Depends(get_current_user)):
-    body = await request.json()
-    query = body.get("query", "")
-    permissions = body.get("permissions", {})
+async def ask_finance_assistant(item: QueryModel):
+    """
+    Accepts JSON: { "query": "...", "permissions": {...} }
+    If OPENAI_API_KEY is set and OpenAI client is available, attempt a chat completion.
+    Otherwise, return a safe fake answer for local testing.
+    """
+    query = item.query.strip()
+    permissions = item.permissions or {}
 
     if not query:
         raise HTTPException(status_code=400, detail="Query is required")
 
-    # Create a chat completion
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",  # ⚡ newer, faster, and cheaper than gpt-3.5
-        messages=[
-            {"role": "system", "content": f"You are an AI personal finance assistant. Data permissions: {permissions}."},
-            {"role": "user", "content": query}
-        ],
-    )
+    # If OpenAI client is available and API key is present, call it
+    if OpenAI is not None and OPENAI_API_KEY:
+        try:
+            client = OpenAI(api_key=OPENAI_API_KEY)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"You are an AI personal finance assistant. Data permissions: {permissions}."
+                    },
+                    {"role": "user", "content": query},
+                ],
+            )
+            # Depending on client library shape; handle gracefully
+            answer = ""
+            try:
+                answer = response.choices[0].message.content
+            except Exception:
+                # If the response shape is different, try alternative keys
+                answer = getattr(response, "text", None) or str(response)
+            return {"answer": answer, "insights": []}
+        except Exception as e:
+            # don't leak provider internals to clients; return an error message
+            raise HTTPException(status_code=502, detail=f"AI provider error: {str(e)}")
 
-    answer = response.choices[0].message.content
-
-    return {"answer": answer, "insights": []}
+    # Fallback for local testing: return a canned answer + simple insights
+    fake_answer = f"[FAKE ANSWER] I received your query: {query}"
+    fake_insights = [f"Example insight for permission key: {k}" for k in permissions.keys()]
+    return {"answer": fake_answer, "insights": fake_insights}

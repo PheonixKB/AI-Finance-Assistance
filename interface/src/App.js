@@ -12,6 +12,7 @@ import Button from "@mui/material/Button";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Login from "./Login";
 import Register from "./Register";
+import SideMenu from "./SideMenu";
 
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
@@ -28,7 +29,6 @@ const initialPermissions = {
 function MainApp({ toggleDarkMode, darkMode }) {
   const { token, logout } = useAuth();
   const [permissions, setPermissions] = useState(initialPermissions);
-  const [showPermissions, setShowPermissions] = useState(false);
   const [messages, setMessages] = useState([
     { sender: "assistant", text: "Ask me anything about your finances!" },
   ]);
@@ -56,30 +56,24 @@ function MainApp({ toggleDarkMode, darkMode }) {
 
   return (
     <Container maxWidth="sm">
-      <Paper elevation={4} sx={{ p: 4, mt: 6, borderRadius: 4, bgcolor: "background.paper" }}>
+      <Paper
+        elevation={4}
+        sx={{ p: 4, mt: 6, borderRadius: 4, bgcolor: "background.paper" }}
+      >
         <Box display="flex" alignItems="center" mb={2}>
           <img src="/logo.png" alt="logo" height={40} style={{ marginRight: 16 }} />
-          <Typography variant="h4" color="primary">Finance AI Assistant</Typography>
+          <Typography variant="h4" color="primary">
+            Finance AI Assistant
+          </Typography>
         </Box>
 
-        <Box display="flex" gap={2} mb={2}>
-          <Button variant="text" color="secondary" onClick={logout}>Logout</Button>
-          <Button variant="contained" onClick={toggleDarkMode}>
-            {darkMode ? "Light Mode" : "Dark Mode"}
-          </Button>
-        </Box>
-
-        <Button
-          variant="outlined"
-          onClick={() => setShowPermissions(!showPermissions)}
-          sx={{ mb: 2 }}
-        >
-          {showPermissions ? "Hide Permissions" : "Show Permissions"}
-        </Button>
-
-        {showPermissions && (
-          <PermissionToggle permissions={permissions} onChange={handlePermissionChange} />
-        )}
+        {/* Side Menu */}
+        <SideMenu
+          onLogout={logout}
+          onToggleDarkMode={toggleDarkMode}
+          permissions={permissions}
+          onPermissionChange={handlePermissionChange}
+        />
 
         <Divider sx={{ my: 2 }} />
         <ChatComponent messages={messages} onSend={handleSend} loading={loading} />
@@ -96,7 +90,9 @@ function AuthScreen() {
       <Container maxWidth="sm">
         <Register onRegistered={() => setShowRegister(false)} />
         <Box textAlign="center" mt={2}>
-          <Button variant="text" onClick={() => setShowRegister(false)}>Already have an account? Login</Button>
+          <Button variant="text" onClick={() => setShowRegister(false)}>
+            Already have an account? Login
+          </Button>
         </Box>
       </Container>
     );
@@ -106,7 +102,9 @@ function AuthScreen() {
     <Container maxWidth="sm">
       <Login onLoggedIn={() => {}} />
       <Box textAlign="center" mt={2}>
-        <Button variant="text" onClick={() => setShowRegister(true)}>Don't have an account? Register</Button>
+        <Button variant="text" onClick={() => setShowRegister(true)}>
+          Don't have an account? Register
+        </Button>
       </Box>
     </Container>
   );
