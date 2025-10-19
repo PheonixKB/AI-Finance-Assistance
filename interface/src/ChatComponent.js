@@ -1,4 +1,4 @@
-// frontend/src/ChatComponent.js
+// interface/src/ChatComponent.js
 import { useState, useRef, useEffect } from "react";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
@@ -10,9 +10,14 @@ import Tooltip from "@mui/material/Tooltip";
 import ReactMarkdown from "react-markdown";
 import { useTheme } from "@mui/material/styles";
 import "./ChatComponent.css";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import Modal from "@mui/material/Modal";
+import Paper from "@mui/material/Paper";
+import FinanceUploadForm from "./FinanceUploadForm";
 
 function ChatComponent({ messages, onSend, loading }) {
   const [input, setInput] = useState("");
+  const [uploadOpen, setUploadOpen] = useState(false); // <-- This was outside, move inside
   const bottomRef = useRef(null);
   const theme = useTheme();
 
@@ -156,7 +161,30 @@ function ChatComponent({ messages, onSend, loading }) {
         >
           {loading ? <CircularProgress size="1.5rem" /> : <SendIcon />}
         </IconButton>
+        {/* Upload Button */}
+        <IconButton onClick={() => setUploadOpen(true)} color="primary" aria-label="Upload finance data">
+          <UploadFileIcon />
+        </IconButton>
       </Box>
+
+      {/* Upload Modal */}
+      <Modal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        sx={{ backdropFilter: "blur(3px)", backgroundColor: "rgba(0,0,0,0.2)" }}
+      >
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+          <Paper sx={{ p: 4, minWidth: 350, borderRadius: 3, boxShadow: 8, bgcolor: "background.paper", position: "relative" }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <b>Upload/Enter Finance Data</b>
+              <IconButton onClick={() => setUploadOpen(false)}>
+                ✖️
+              </IconButton>
+            </Box>
+            <FinanceUploadForm onSubmitted={() => setUploadOpen(false)} />
+          </Paper>
+        </Box>
+      </Modal>
     </Box>
   );
 }

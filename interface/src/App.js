@@ -1,4 +1,4 @@
-// frontend/src/App.js
+// interface/src/App.js
 import { useState, useEffect } from "react";
 import { askFinanceAssistant, fetchSessions, createSession, fetchMessages, addMessage } from "./apiService";
 import { AuthProvider, useAuth } from "./AuthContext";
