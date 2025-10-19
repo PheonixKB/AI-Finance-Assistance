@@ -1,5 +1,3 @@
--- backend/data.sql
-
 -- Finanace Assistant Database
 CREATE DATABASE IF NOT EXISTS finance_assistant;
 USE finance_assistant;
@@ -31,7 +29,34 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
 );
 
+-- User finance summary data (one row per user)
+CREATE TABLE IF NOT EXISTS user_finance (
+    user_id INT PRIMARY KEY,
+    cash INT,
+    bank INT,
+    loans INT,
+    credit_card INT,
+    mutual_funds INT,
+    stocks INT,
+    epf_balance INT,
+    credit_score INT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
--- Optional: example user
-INSERT INTO users (username, password_hash)
-VALUES ('testuser', '$2b$12$EXAMPLEHASHONLY');
+-- User transactions
+CREATE TABLE IF NOT EXISTS user_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    date DATE,
+    descr VARCHAR(255),
+    amount INT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Example: Insert finance data and transactions for testuser (id=1 after user insert)
+INSERT INTO user_finance (user_id, cash, bank, loans, credit_card, mutual_funds, stocks, epf_balance, credit_score)
+VALUES (1, 1000, 95000, 15000, 4000, 20000, 12000, 70000, 780);
+
+INSERT INTO user_transactions (user_id, date, descr, amount) VALUES
+(1, '2025-10-01', 'Dining Out', 1200),
+(1, '2025-10-02', 'Grocery', 2000);
