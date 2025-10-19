@@ -1,17 +1,31 @@
+// frontend/src/ChatComponent.js
 import { useState, useRef, useEffect } from "react";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import SendIcon from "@mui/icons-material/Send";
 import CircularProgress from "@mui/material/CircularProgress";
 import ReactMarkdown from "react-markdown";
+import { useTheme } from "@mui/material/styles";
 import "./ChatComponent.css";
 
 function ChatComponent({ messages, onSend, loading }) {
   const [input, setInput] = useState("");
   const bottomRef = useRef(null);
+  const theme = useTheme();
+
+  // ✅ Scroll to bottom when messages update
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // ✅ Handle Enter / Shift+Enter
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -20,60 +34,90 @@ function ChatComponent({ messages, onSend, loading }) {
     setInput("");
   };
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   return (
-    <Box>
-      <List
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "70vh",
+        borderRadius: 3,
+        p: 2,
+        bgcolor:
+          theme.palette.mode === "dark"
+            ? "rgba(255,255,255,0.06)"
+            : "rgba(0,0,0,0.03)",
+      }}
+    >
+      {/* Message List */}
+      <Box
         sx={{
-          minHeight: 180,
-          maxHeight: 220,
+          flexGrow: 1,
           overflowY: "auto",
-          background: "#f4f4fa",
-          borderRadius: 2,
-          px: 2,
           mb: 2,
+          px: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 1.5,
         }}
       >
         {messages.map((msg, idx) => (
-          <ListItem key={idx} className={`message ${msg.sender}`}>
-            <Box>
-              <Typography
-                variant="subtitle2"
-                color={msg.sender === "user" ? "primary" : "secondary"}
-              >
-                {msg.sender === "user" ? "You" : "Assistant"}:
-              </Typography>
-
-              {msg.sender === "assistant" ? (
-                // ✅ Wrap markdown instead of passing className directly
-                <div className="markdown-content">
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
-                </div>
-              ) : (
-                <Typography variant="body1">{msg.text}</Typography>
-              )}
-            </Box>
-          </ListItem>
+          <Box
+            key={idx}
+            className={`message ${msg.sender}`}
+            sx={{
+              alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
+              bgcolor:
+                msg.sender === "user"
+                  ? theme.palette.primary.main
+                  : theme.palette.mode === "dark"
+                  ? "#333"
+                  : "#e0e0e0",
+              color:
+                msg.sender === "user"
+                  ? theme.palette.primary.contrastText
+                  : theme.palette.text.primary,
+              p: 1.5,
+              borderRadius: 2,
+              maxWidth: "80%",
+              wordWrap: "break-word",
+              whiteSpace: "pre-wrap",
+              boxShadow:
+                msg.sender === "user"
+                  ? "0 2px 6px rgba(0,0,0,0.2)"
+                  : "0 2px 6px rgba(0,0,0,0.1)",
+            }}
+          >
+            <ReactMarkdown>{msg.text}</ReactMarkdown>
+          </Box>
         ))}
         <div ref={bottomRef} />
-      </List>
+      </Box>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", gap: 12 }}>
+      {/* Input Box */}
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: "flex", gap: 1, alignItems: "center" }}
+      >
         <TextField
-          variant="outlined"
           fullWidth
+          variant="outlined"
+          placeholder="Send a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask your finance assistant..."
+          onKeyDown={handleKeyDown}
+          multiline
+          maxRows={3}
           disabled={loading}
         />
-        <Button variant="contained" color="primary" type="submit" disabled={loading}>
-          {loading ? <CircularProgress size="1.5rem" /> : "Send"}
-        </Button>
-      </form>
+        <IconButton
+          color="primary"
+          type="submit"
+          disabled={loading || !input.trim()}
+        >
+          {loading ? <CircularProgress size="1.5rem" /> : <SendIcon />}
+        </IconButton>
+      </Box>
     </Box>
   );
 }

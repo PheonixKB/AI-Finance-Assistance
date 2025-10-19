@@ -1,73 +1,86 @@
-# backend/users.py
-import os
-from fastapi import APIRouter, HTTPException, Depends
-from passlib.context import CryptContext
+import os, datetime
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
+from passlib.context import CryptContext
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from models import User, Base
-import datetime
-import sqlalchemy
+from jose import jwt
+from db import get_db_connection
 
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
-
-# Database: use DATABASE_URL env or default to local SQLite for convenience
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./users.db")
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-# Create tables if they don't exist
-Base.metadata.create_all(bind=engine)
+load_dotenv()
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
 ALGORITHM = "HS256"
 
-
 class UserCreate(BaseModel):
     username: str
     password: str
 
+# Decode JWT and return user
+def get_current_user(request: Request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing token")
 
+    scheme, _, token = auth_header.partition(" ")
+    if scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid auth scheme")
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload["sub"]
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, username FROM users WHERE username=%s", (username,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# Register
 @router.post("/register")
 def register(user: UserCreate):
-    """Register a new user (accepts JSON)."""
-    db = SessionLocal()
+    password = user.password[:72]
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
     try:
-        existing = db.query(User).filter(User.username == user.username).first()
-        if existing:
+        cursor.execute("SELECT id FROM users WHERE username=%s", (user.username,))
+        if cursor.fetchone():
             raise HTTPException(status_code=400, detail="Username already exists")
-        hashed = pwd_context.hash(user.password)
-        new_user = User(username=user.username, password_hash=hashed, created_at=datetime.datetime.utcnow())
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return {"message": "registered", "username": new_user.username}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+        hashed = pwd_context.hash(password)
+        now = datetime.datetime.utcnow()
+        cursor.execute(
+            "INSERT INTO users (username, password_hash, created_at) VALUES (%s, %s, %s)",
+            (user.username, hashed, now),
+        )
+        conn.commit()
+        return {"message": "registered", "username": user.username}
     finally:
-        db.close()
+        cursor.close()
+        conn.close()
 
-
+# Login
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    """
-    Login expects form-encoded body (application/x-www-form-urlencoded)
-    with fields 'username' and 'password' (this is how OAuth2PasswordRequestForm works).
-    Returns a simple JWT-like token string (signed with SECRET_KEY) for simplicity.
-    """
-    db = SessionLocal()
+    password = form_data.password[:72]
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
     try:
-        user = db.query(User).filter(User.username == form_data.username).first()
-        if not user or not pwd_context.verify(form_data.password, user.password_hash):
+        cursor.execute(
+            "SELECT id, username, password_hash FROM users WHERE username=%s",
+            (form_data.username,),
+        )
+        user = cursor.fetchone()
+        if not user or not pwd_context.verify(password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        # Create a simple token payload (for demo only)
-        from jose import jwt
-        token = jwt.encode({"sub": user.username}, SECRET_KEY, algorithm=ALGORITHM)
+        token = jwt.encode({"sub": user["username"]}, SECRET_KEY, algorithm=ALGORITHM)
         return {"access_token": token, "token_type": "bearer"}
     finally:
-        db.close()
+        cursor.close()
+        conn.close()

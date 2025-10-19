@@ -1,19 +1,19 @@
-import { useState } from "react";
-import PermissionToggle from "./PermissionToggle";
+// frontend/src/App.js
+import { useState, useEffect } from "react";
+import { askFinanceAssistant, fetchSessions, createSession, fetchMessages, addMessage } from "./apiService";
+import { AuthProvider, useAuth } from "./AuthContext";
+import Login from "./Login";
+import Register from "./Register";
+import SideMenu from "./SideMenu";
 import ChatComponent from "./ChatComponent";
 import InsightsDisplay from "./InsightsDisplay";
-import { askFinanceAssistant } from "./apiService";
+
 import Container from "@mui/material/Container";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Button from "@mui/material/Button";
-import { AuthProvider, useAuth } from "./AuthContext";
-import Login from "./Login";
-import Register from "./Register";
-import SideMenu from "./SideMenu";
-
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
 
@@ -29,26 +29,76 @@ const initialPermissions = {
 function MainApp({ toggleDarkMode, darkMode }) {
   const { token, logout } = useAuth();
   const [permissions, setPermissions] = useState(initialPermissions);
-  const [messages, setMessages] = useState([
-    { sender: "assistant", text: "Ask me anything about your finances!" },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [activeSession, setActiveSession] = useState(null);
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Load chat sessions
+  useEffect(() => {
+    if (!token) return;
+    const loadSessions = async () => {
+      try {
+        const res = await fetchSessions(token);
+        setSessions(res);
+        if (res.length > 0) setActiveSession(res[0].id);
+      } catch (err) {
+        console.error("Failed to load sessions:", err);
+      }
+    };
+    loadSessions();
+  }, [token]);
+
+  // Load messages when session changes
+  useEffect(() => {
+    if (!activeSession) return;
+    const loadMessages = async () => {
+      try {
+        const res = await fetchMessages(activeSession);
+        setMessages(res);
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+      }
+    };
+    loadMessages();
+  }, [activeSession]);
+
   const handlePermissionChange = (newPermissions) => setPermissions(newPermissions);
 
+  const handleNewChat = async () => {
+    if (!token) return;
+    const title = `Chat ${sessions.length + 1}`;
+    try {
+      const newSession = await createSession(token, title);
+      // Ensure new session object matches shape from backend: {id, title}
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveSession(newSession.id);
+      setMessages([]);
+    } catch (err) {
+      console.error("Failed to create session:", err);
+    }
+  };
+
+
+
   const handleSend = async (query) => {
+    if (!activeSession) return alert("Please create or select a chat first!");
+
     setLoading(true);
-    setMessages((msgs) => [...msgs, { sender: "user", text: query }]);
+    const userMsg = { sender: "user", text: query };
+    setMessages((msgs) => [...msgs, userMsg]);
+
+    await addMessage(activeSession, "user", query);
+
     try {
       const data = await askFinanceAssistant(query, permissions, token);
-      setMessages((msgs) => [...msgs, { sender: "assistant", text: data.answer }]);
+      const reply = { sender: "assistant", text: data.answer };
+      await addMessage(activeSession, "assistant", data.answer);
+      setMessages((msgs) => [...msgs, reply]);
       setInsights(data.insights || []);
     } catch (err) {
-      setMessages((msgs) => [
-        ...msgs,
-        { sender: "assistant", text: "Error talking to backend!" },
-      ]);
+      setMessages((msgs) => [...msgs, { sender: "assistant", text: "Error talking to backend!" }]);
       setInsights([]);
     }
     setLoading(false);
@@ -56,23 +106,20 @@ function MainApp({ toggleDarkMode, darkMode }) {
 
   return (
     <Container maxWidth="sm">
-      <Paper
-        elevation={4}
-        sx={{ p: 4, mt: 6, borderRadius: 4, bgcolor: "background.paper" }}
-      >
+      <Paper elevation={4} sx={{ p: 4, mt: 6, borderRadius: 4, bgcolor: "background.paper" }}>
         <Box display="flex" alignItems="center" mb={2}>
           <img src="/logo.png" alt="logo" height={40} style={{ marginRight: 16 }} />
-          <Typography variant="h4" color="primary">
-            Finance AI Assistant
-          </Typography>
+          <Typography variant="h4" color="primary">Finance AI Assistant</Typography>
         </Box>
 
-        {/* Side Menu */}
         <SideMenu
           onLogout={logout}
           onToggleDarkMode={toggleDarkMode}
           permissions={permissions}
           onPermissionChange={handlePermissionChange}
+          onNewChat={handleNewChat}
+          sessions={sessions}
+          onSelectSession={(id) => setActiveSession(id)}
         />
 
         <Divider sx={{ my: 2 }} />
