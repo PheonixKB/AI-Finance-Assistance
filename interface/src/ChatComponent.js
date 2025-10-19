@@ -5,6 +5,8 @@ import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import SendIcon from "@mui/icons-material/Send";
 import CircularProgress from "@mui/material/CircularProgress";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import Tooltip from "@mui/material/Tooltip";
 import ReactMarkdown from "react-markdown";
 import { useTheme } from "@mui/material/styles";
 import "./ChatComponent.css";
@@ -14,12 +16,10 @@ function ChatComponent({ messages, onSend, loading }) {
   const bottomRef = useRef(null);
   const theme = useTheme();
 
-  // ✅ Scroll to bottom when messages update
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ✅ Handle Enter / Shift+Enter
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -32,6 +32,24 @@ function ChatComponent({ messages, onSend, loading }) {
     if (!input.trim() || loading) return;
     onSend(input);
     setInput("");
+  };
+
+  // Copy full chat
+  const handleCopyChat = () => {
+    const text = messages
+      .map(
+        (msg) =>
+          `${msg.sender === "user" ? "You" : "AI"}: ${msg.text.replace(/\n+/g, " ")}`
+      )
+      .join("\n\n");
+    navigator.clipboard.writeText(text);
+    alert("Chat copied to clipboard!");
+  };
+
+  // Copy one message
+  const handleCopyMsg = (msg) => {
+    navigator.clipboard.writeText(msg.text);
+    alert("Message copied!");
   };
 
   return (
@@ -48,6 +66,15 @@ function ChatComponent({ messages, onSend, loading }) {
             : "rgba(0,0,0,0.03)",
       }}
     >
+      {/* Copy Chat Button */}
+      <Box display="flex" justifyContent="flex-end" mb={1}>
+        <Tooltip title="Copy chat as text">
+          <IconButton size="small" onClick={handleCopyChat} aria-label="Copy chat">
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
       {/* Message List */}
       <Box
         sx={{
@@ -66,6 +93,7 @@ function ChatComponent({ messages, onSend, loading }) {
             className={`message ${msg.sender}`}
             sx={{
               alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
+              position: "relative",
               bgcolor:
                 msg.sender === "user"
                   ? theme.palette.primary.main
@@ -87,7 +115,18 @@ function ChatComponent({ messages, onSend, loading }) {
                   : "0 2px 6px rgba(0,0,0,0.1)",
             }}
           >
-            <ReactMarkdown>{msg.text}</ReactMarkdown>
+            {/* Message content */}
+            <div className="markdown-content">
+              <ReactMarkdown>{msg.text}</ReactMarkdown>
+            </div>
+            {/* Copy single message button */}
+            <Box sx={{ position: "absolute", top: 4, right: 8 }}>
+              <Tooltip title="Copy message">
+                <IconButton size="small" onClick={() => handleCopyMsg(msg)}>
+                  <ContentCopyIcon fontSize="inherit" />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
         ))}
         <div ref={bottomRef} />
