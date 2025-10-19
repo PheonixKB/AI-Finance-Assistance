@@ -53,7 +53,7 @@ def register(user: UserCreate):
         cursor.execute("SELECT id FROM users WHERE username=%s", (user.username,))
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="Username already exists")
-        hashed = pwd_context.hash(password)
+        hashed = pwd_context.hash(user.password[:72])
         now = datetime.datetime.utcnow()
         cursor.execute(
             "INSERT INTO users (username, password_hash, created_at) VALUES (%s, %s, %s)",
@@ -77,7 +77,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
             (form_data.username,),
         )
         user = cursor.fetchone()
-        if not user or not pwd_context.verify(password, user["password_hash"]):
+        if not user or not pwd_context.verify(form_data.password[:72], user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         token = jwt.encode({"sub": user["username"]}, SECRET_KEY, algorithm=ALGORITHM)
         return {"access_token": token, "token_type": "bearer"}

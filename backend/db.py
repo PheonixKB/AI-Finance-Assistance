@@ -2,13 +2,17 @@
 
 import mysql.connector
 from mysql.connector import pooling
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # MySQL connection configuration
 dbconfig = {
-    "host": "localhost",
-    "user": "root",            # or a dedicated user like 'finance_user'
-    "password": "kavya1022",
-    "database": "finance_assistant",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME", "finance_assistant"),
     "auth_plugin": "mysql_native_password"  # required for MySQL 8 default auth
 }
 
