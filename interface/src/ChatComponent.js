@@ -136,13 +136,28 @@ function ChatComponent({ messages, onSend, loading}) {
                 <ReactMarkdown>{msg.text}</ReactMarkdown>
               </div>
               {/* Copy single message button */}
-              <Box sx={{ position: "absolute", top: 4, right: 8 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
+                  mt: 0.5,
+                }}
+              >
                 <Tooltip title="Copy message">
-                  <IconButton size="small" onClick={() => handleCopyMsg(msg)}>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleCopyMsg(msg)}
+                    sx={{
+                      opacity: 0.6,
+                      "&:hover": { opacity: 1 },
+                      transform: "scale(0.9)",
+                    }}
+                  >
                     <ContentCopyIcon fontSize="inherit" />
                   </IconButton>
                 </Tooltip>
               </Box>
+
             </Box>
             {msg.sender === "user" && (
               <Avatar>
