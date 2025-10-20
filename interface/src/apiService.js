@@ -1,9 +1,36 @@
-// frontend/src/apiService.js
+// interface/src/apiService.js
 import {jwtDecode} from "jwt-decode"; // ✅ correct import
 
 const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:8000";
-const API_BASE = `${BASE_URL}/chat`;
-const API_AUTH = `${BASE_URL}/api`;
+const API_BASE = `${BASE_URL}/api`;
+
+const getToken = () => localStorage.getItem("token");
+
+const request = async (endpoint, options = {}) => {
+  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error);
+  }
+
+  return res.json();
+};
+
+const apiService = {
+  get: (endpoint) => request(endpoint),
+  post: (endpoint, body) => request(endpoint, { method: "POST", body: JSON.stringify(body) }),
+  // You can add other methods like put, delete etc. in a similar way
+};
 
 // Decode JWT to get username
 function getUserFromToken(token) {
@@ -21,7 +48,7 @@ export async function fetchSessions(token) {
   if (!token) throw new Error("No token provided");
 
   const user = getUserFromToken(token);
-  const res = await fetch(`${API_BASE}/sessions/${user.username}`, {
+  const res = await fetch(`${API_BASE}/chat/sessions/${user.username}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -33,7 +60,7 @@ export async function fetchSessions(token) {
 export async function createSession(token, title) {
   if (!token) throw new Error("No token provided");
 
-  const res = await fetch(`${API_BASE}/create_session`, {
+  const res = await fetch(`${API_BASE}/chat/create_session`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +80,7 @@ export async function createSession(token, title) {
 
 // Fetch messages in a session
 export async function fetchMessages(sessionId, token) {
-  const res = await fetch(`${API_BASE}/messages/${sessionId}`, {
+  const res = await fetch(`${API_BASE}/chat/messages/${sessionId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Failed to fetch messages");
@@ -62,7 +89,7 @@ export async function fetchMessages(sessionId, token) {
 
 // Add a message to a session
 export async function addMessage(sessionId, sender, text, token) {
-  const res = await fetch(`${API_BASE}/add_message`, {
+  const res = await fetch(`${API_BASE}/chat/add_message`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -84,7 +111,7 @@ export async function addMessage(sessionId, sender, text, token) {
 // ---------------------------
 
 export async function register(username, password) {
-  const res = await fetch(`${API_AUTH}/register`, {
+  const res = await fetch(`${API_BASE}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -98,28 +125,34 @@ export async function login(username, password) {
   params.append("username", username);
   params.append("password", password);
 
-  const res = await fetch(`${API_AUTH}/login`, {
+  const res = await fetch(`${API_BASE}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
   });
   if (!res.ok) throw new Error(await res.text());
-  return await res.json(); // { access_token, token_type }
+  const data = await res.json();
+  if (data.access_token) {
+    localStorage.setItem("token", data.access_token);
+  }
+  return data;
 }
 
 // ---------------------------
 // AI Assistant
 // ---------------------------
 
-export async function askFinanceAssistant(query, permissions, token) {
-  const res = await fetch(`${API_AUTH}/ask`, {
+export async function askFinanceAssistant(query, token) {
+  const res = await fetch(`${API_BASE}/ask`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ query, permissions }),
+    body: JSON.stringify({ query }),
   });
   if (!res.ok) throw new Error(await res.text());
   return await res.json();
 }
+
+export default apiService;

@@ -32,7 +32,7 @@ function Register({ onRegistered }) {
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       <form onSubmit={handleSubmit}>
         <TextField label="Username" fullWidth margin="normal" value={username} onChange={e => setUsername(e.target.value)} />
-        <TextField label="Password" type="password" fullWidth margin="normal" value={password} onChange={e => setPassword(e.target.value)} inputProps={{ maxLength: 72 }} />
+        <TextField label="Password" type="password" fullWidth margin="normal" value={password} onChange={e => setPassword(e.target.value)} />
         <Button variant="contained" color="primary" type="submit" fullWidth sx={{ mt: 2 }}>Register</Button>
       </form>
     </Box>

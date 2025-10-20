@@ -1,9 +1,11 @@
-// frontend/src/PermissionToggle.js
+// interface/src/PermissionToggle.js
+import { useState, useEffect } from "react";
 import Switch from "@mui/material/Switch";
 import FormGroup from "@mui/material/FormGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import apiService from "./apiService";
 
 const categories = [
   { key: "assets", label: "Assets" },
@@ -14,8 +16,33 @@ const categories = [
   { key: "creditScore", label: "Credit Score" }
 ];
 
-function PermissionToggle({ permissions, onChange }) {
-  const handleToggle = (key) => onChange({ ...permissions, [key]: !permissions[key] });
+function PermissionToggle() {
+  const [permissions, setPermissions] = useState({});
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      try {
+        const data = await apiService.get("/permissions/");
+        setPermissions(data);
+      } catch (error) {
+        console.error("Error fetching permissions:", error);
+      }
+    };
+    fetchPermissions();
+  }, []);
+
+  const handleToggle = async (key) => {
+    const newPermissions = { ...permissions, [key]: !permissions[key] };
+    setPermissions(newPermissions);
+    try {
+      await apiService.post("/permissions/", newPermissions);
+    } catch (error) {
+      console.error("Error updating permissions:", error);
+      // Optionally revert the state if the API call fails
+      setPermissions(permissions);
+    }
+  };
+
   return (
     <Box mt={2} mb={2}>
       <Typography variant="subtitle1" fontWeight={600} gutterBottom>Data Permissions</Typography>

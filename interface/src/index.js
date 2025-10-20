@@ -1,4 +1,4 @@
-// frontend/src/index.js
+// interface/src/index.js
 import ReactDOM from "react-dom/client";
 import AppWrapper from "./App";
 

@@ -14,8 +14,14 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Modal from "@mui/material/Modal";
 import Paper from "@mui/material/Paper";
 import FinanceUploadForm from "./FinanceUploadForm";
+import InsightsDisplay from "./InsightsDisplay";
+import Avatar from "@mui/material/Avatar";
+import Stack from "@mui/material/Stack";
+import PersonIcon from "@mui/icons-material/Person";
+import AssistantIcon from "@mui/icons-material/Assistant";
 
-function ChatComponent({ messages, onSend, loading }) {
+
+function ChatComponent({ messages, onSend, loading}) {
   const [input, setInput] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false); // <-- This was outside, move inside
   const bottomRef = useRef(null);
@@ -93,48 +99,58 @@ function ChatComponent({ messages, onSend, loading }) {
         }}
       >
         {messages.map((msg, idx) => (
-          <Box
+          <Stack
             key={idx}
-            className={`message ${msg.sender}`}
-            sx={{
-              alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
-              position: "relative",
-              bgcolor:
-                msg.sender === "user"
-                  ? theme.palette.primary.main
-                  : theme.palette.mode === "dark"
-                  ? "#333"
-                  : "#e0e0e0",
-              color:
-                msg.sender === "user"
-                  ? theme.palette.primary.contrastText
-                  : theme.palette.text.primary,
-              p: 1.5,
-              borderRadius: 2,
-              maxWidth: "80%",
-              wordWrap: "break-word",
-              whiteSpace: "pre-wrap",
-              boxShadow:
-                msg.sender === "user"
-                  ? "0 2px 6px rgba(0,0,0,0.2)"
-                  : "0 2px 6px rgba(0,0,0,0.1)",
-            }}
+            direction="row"
+            spacing={1.5}
+            alignItems="flex-start"
+            justifyContent={msg.sender === "user" ? "flex-end" : "flex-start"}
           >
-            {/* Message content */}
-            <div className="markdown-content">
-              <ReactMarkdown>{msg.text}</ReactMarkdown>
-            </div>
-            {/* Copy single message button */}
-            <Box sx={{ position: "absolute", top: 4, right: 8 }}>
-              <Tooltip title="Copy message">
-                <IconButton size="small" onClick={() => handleCopyMsg(msg)}>
-                  <ContentCopyIcon fontSize="inherit" />
-                </IconButton>
-              </Tooltip>
+            {msg.sender === "assistant" && (
+              <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                <AssistantIcon />
+              </Avatar>
+            )}
+            <Box
+              className={`message ${msg.sender}`}
+              sx={{
+                position: "relative",
+                bgcolor:
+                  msg.sender === "user"
+                    ? theme.palette.primary.main
+                    : theme.palette.background.paper,
+                color:
+                  msg.sender === "user"
+                    ? theme.palette.primary.contrastText
+                    : theme.palette.text.primary,
+                p: 1.5,
+                borderRadius: 2,
+                maxWidth: "80%",
+                wordWrap: "break-word",
+                whiteSpace: "pre-wrap",
+                boxShadow: 1,
+              }}
+            >
+              {/* Message content */}
+              <div className="markdown-content">
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
+              </div>
+              {/* Copy single message button */}
+              <Box sx={{ position: "absolute", top: 4, right: 8 }}>
+                <Tooltip title="Copy message">
+                  <IconButton size="small" onClick={() => handleCopyMsg(msg)}>
+                    <ContentCopyIcon fontSize="inherit" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
-          </Box>
+            {msg.sender === "user" && (
+              <Avatar>
+                <PersonIcon />
+              </Avatar>
+            )}
+          </Stack>
         ))}
-        <div ref={bottomRef} />
       </Box>
 
       {/* Input Box */}

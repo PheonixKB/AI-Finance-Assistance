@@ -1,6 +1,6 @@
 # backend/finance_data.py
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from users import get_current_user
 from db import get_db_connection

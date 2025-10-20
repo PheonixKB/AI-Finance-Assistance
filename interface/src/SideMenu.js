@@ -1,90 +1,92 @@
-// interface/src/SideMenu.js
-import { useState, useEffect } from "react";
 import { useTheme } from "@mui/material/styles";
+import {
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  IconButton,
+} from "@mui/material";
+import { Add, Chat, DarkMode, LightMode, Logout, ChevronLeft, ChevronRight } from "@mui/icons-material";
 import PermissionToggle from "./PermissionToggle";
 import "./SideMenu.css";
 
 const SideMenu = ({
   onLogout,
   onToggleDarkMode,
-  permissions,
-  onPermissionChange,
   onNewChat,
   onSelectSession,
-  sessions = []
+  sessions = [],
+  collapsed,
+  toggleCollapse,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const theme = useTheme();
 
-  const toggleMenu = () => setIsOpen(!isOpen);
-  const closeMenu = () => setIsOpen(false);
-
-  const menuStyle = {
-    backgroundColor: theme.palette.mode === "dark" ? "#121212" : "#ffffff",
-    color: theme.palette.mode === "dark" ? "#f5f5f5" : "#222",
-    boxShadow:
-      theme.palette.mode === "dark"
-        ? "0 0 10px rgba(255,255,255,0.2)"
-        : "0 0 10px rgba(0,0,0,0.2)",
-  };
-
-  const buttonStyle = {
-    backgroundColor: theme.palette.mode === "dark" ? "#1e1e1e" : "#f4f4f4",
-    color: theme.palette.text.primary,
-    border: "none",
-    padding: "8px 12px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    marginBottom: "10px",
-    width: "100%",
-    textAlign: "left",
-  };
-
   return (
-    <>
-      {/* Hamburger Icon */}
-      <div className="hamburger" onClick={toggleMenu}>
-        &#9776;
+    <div className="SideMenu-wrapper">
+      {/* Header Row */}
+      <div className="SideMenu-top">
+        <h3 style={{ margin: 0 }}>Menu</h3>
+        <IconButton onClick={toggleCollapse} size="small">
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+        </IconButton>
       </div>
 
-      {/* Overlay */}
-      {isOpen && <div className="overlay" onClick={closeMenu}></div>}
+      <Divider />
 
-      {/* Side Menu */}
-      <div className={`side-menu ${isOpen ? "show" : ""}`} style={menuStyle}>
-        <button style={buttonStyle} onClick={() => { onNewChat(); closeMenu(); }}>
-          ➕ New Chat
-        </button>
+      {/* Menu List */}
+      <div className="SideMenu-content">
+        <List>
+          <ListItem disablePadding>
+            <ListItemButton onClick={onNewChat}>
+              <ListItemIcon><Add /></ListItemIcon>
+              <ListItemText primary="New Chat" />
+            </ListItemButton>
+          </ListItem>
+        </List>
 
-        {/* Chat Sessions */}
-        <div style={{ marginBottom: "20px" }}>
-          <h4 style={{ marginLeft: "10px" }}>Your Chats</h4>
+        <Divider />
+
+        <List>
           {sessions.length > 0 ? (
             sessions.map((s) => (
-              <button
-                key={s.id}
-                style={buttonStyle}
-                onClick={() => { onSelectSession(s.id); closeMenu(); }}
-              >
-                💬 {s.title}
-              </button>
+              <ListItem key={s.id} disablePadding>
+                <ListItemButton onClick={() => onSelectSession(s.id)}>
+                  <ListItemIcon><Chat /></ListItemIcon>
+                  <ListItemText primary={s.title} />
+                </ListItemButton>
+              </ListItem>
             ))
           ) : (
-            <p style={{ marginLeft: "10px" }}>No chats yet</p>
+            <ListItem><ListItemText primary="No chats yet" /></ListItem>
           )}
-        </div>
+        </List>
 
-        <PermissionToggle permissions={permissions} onChange={onPermissionChange} />
-
-        <button style={buttonStyle} onClick={() => { onToggleDarkMode(); closeMenu(); }}>
-          🌗 Toggle Theme
-        </button>
-
-        <button style={buttonStyle} onClick={() => { onLogout(); closeMenu(); }}>
-          🚪 Logout
-        </button>
+        <Divider />
+        <PermissionToggle />
       </div>
-    </>
+
+      {/* Footer */}
+      <div className="SideMenu-footer">
+        <List>
+          <ListItem disablePadding>
+            <ListItemButton onClick={onToggleDarkMode}>
+              <ListItemIcon>
+                {theme.palette.mode === "dark" ? <LightMode /> : <DarkMode />}
+              </ListItemIcon>
+              <ListItemText primary="Toggle Theme" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton onClick={onLogout}>
+              <ListItemIcon><Logout /></ListItemIcon>
+              <ListItemText primary="Logout" />
+            </ListItemButton>
+          </ListItem>
+        </List>
+      </div>
+    </div>
   );
 };
 

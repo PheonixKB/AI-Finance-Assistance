@@ -53,10 +53,14 @@ CREATE TABLE IF NOT EXISTS user_transactions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Example: Insert finance data and transactions for testuser (id=1 after user insert)
-INSERT INTO user_finance (user_id, cash, bank, loans, credit_card, mutual_funds, stocks, epf_balance, credit_score)
-VALUES (1, 1000, 95000, 15000, 4000, 20000, 12000, 70000, 780);
-
-INSERT INTO user_transactions (user_id, date, descr, amount) VALUES
-(1, '2025-10-01', 'Dining Out', 1200),
-(1, '2025-10-02', 'Grocery', 2000);
+-- User permissions for data access
+CREATE TABLE IF NOT EXISTS user_permissions (
+    user_id INT PRIMARY KEY,
+    assets BOOLEAN DEFAULT TRUE,
+    liabilities BOOLEAN DEFAULT TRUE,
+    transactions BOOLEAN DEFAULT TRUE,
+    investments BOOLEAN DEFAULT TRUE,
+    epf BOOLEAN DEFAULT TRUE,
+    creditScore BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

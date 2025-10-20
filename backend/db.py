@@ -1,6 +1,5 @@
 # backend/db.py
 
-import mysql.connector
 from mysql.connector import pooling
 import os
 from dotenv import load_dotenv

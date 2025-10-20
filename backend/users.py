@@ -1,4 +1,6 @@
-import os, datetime
+import os
+import datetime
+import secrets
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -9,9 +11,10 @@ from db import get_db_connection
 
 load_dotenv()
 
+
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
 ALGORITHM = "HS256"
 
 class UserCreate(BaseModel):
@@ -46,19 +49,20 @@ def get_current_user(request: Request):
 # Register
 @router.post("/register")
 def register(user: UserCreate):
-    password = user.password[:72]
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute("SELECT id FROM users WHERE username=%s", (user.username,))
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="Username already exists")
-        hashed = pwd_context.hash(user.password[:72])
+        hashed = pwd_context.hash(user.password)
         now = datetime.datetime.utcnow()
         cursor.execute(
             "INSERT INTO users (username, password_hash, created_at) VALUES (%s, %s, %s)",
             (user.username, hashed, now),
         )
+        user_id = cursor.lastrowid
+        cursor.execute("INSERT INTO user_permissions (user_id) VALUES (%s)", (user_id,))
         conn.commit()
         return {"message": "registered", "username": user.username}
     finally:
@@ -68,7 +72,6 @@ def register(user: UserCreate):
 # Login
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    password = form_data.password[:72]
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -77,7 +80,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
             (form_data.username,),
         )
         user = cursor.fetchone()
-        if not user or not pwd_context.verify(form_data.password[:72], user["password_hash"]):
+        if not user or not pwd_context.verify(form_data.password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         token = jwt.encode({"sub": user["username"]}, SECRET_KEY, algorithm=ALGORITHM)
         return {"access_token": token, "token_type": "bearer"}
