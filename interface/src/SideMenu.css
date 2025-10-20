@@ -1,4 +1,4 @@
-/* Drawer Paper Styling */
+/* ===== Drawer Paper ===== */
 .MuiDrawer-paper {
   box-sizing: border-box;
   position: relative;
@@ -8,17 +8,7 @@
   border-right: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-/* Drawer styling */
-.MuiDrawer-paper {
-  box-sizing: border-box;
-  position: relative;
-  width: var(--drawer-width, 280px) !important;
-  transition: width 0.25s ease;
-  overflow: hidden;
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
-}
-
-/* The resize handle between sidebar and main content */
+/* ===== Resize Handle ===== */
 .resize-handle {
   width: 6px;
   cursor: col-resize;
@@ -34,8 +24,7 @@
   background-color: rgba(0, 0, 0, 0.1);
 }
 
-
-/* Layout */
+/* ===== Layout ===== */
 .SideMenu-wrapper {
   display: flex;
   flex-direction: column;
@@ -60,12 +49,36 @@
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* Collapsed */
+/* ===== Collapsed ===== */
 .SideMenu-collapsed {
   display: none;
 }
 
-/* Smooth transitions */
+/* ===== Smooth Transitions ===== */
 main {
   transition: margin-left 0.25s ease, width 0.25s ease;
+}
+
+/* ===== Permissions Subsection ===== */
+.PermissionToggle-sub {
+  margin-left: 24px;
+  padding: 8px 0;
+  border-left: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Make the permissions section visually smaller */
+.PermissionToggle-sub {
+  margin-left: 24px;
+  padding: 8px 0;
+  border-left: 2px solid rgba(0, 0, 0, 0.1);
+  font-size: 0.85rem; /* smaller text */
+  opacity: 0.85; /* slightly faded */
+}
+
+.PermissionToggle-sub .MuiFormControlLabel-label {
+  font-size: 0.8rem;
+}
+
+.PermissionToggle-sub .MuiSwitch-root {
+  transform: scale(0.8); /* shrink switches slightly */
 }
