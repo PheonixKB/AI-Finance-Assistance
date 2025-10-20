@@ -40,6 +40,13 @@ function MainApp({ toggleDarkMode }) {
   const [collapsed, setCollapsed] = useState(false);
   const isResizing = useRef(false);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--drawer-width",
+      `${collapsed ? 0 : drawerWidth}px`
+    );
+  }, [drawerWidth, collapsed]);
+
   // --- Resize Logic ---
   const startResize = (e) => {
     if (collapsed) return;
@@ -47,20 +54,16 @@ function MainApp({ toggleDarkMode }) {
     document.addEventListener("mousemove", resizeDrawer);
     document.addEventListener("mouseup", stopResize);
   };
-
   const resizeDrawer = (e) => {
     if (!isResizing.current) return;
     const newWidth = Math.min(Math.max(e.clientX, 180), 480);
     setDrawerWidth(newWidth);
-    document.documentElement.style.setProperty("--drawer-width", `${newWidth}px`);
   };
-
   const stopResize = () => {
     isResizing.current = false;
     document.removeEventListener("mousemove", resizeDrawer);
     document.removeEventListener("mouseup", stopResize);
   };
-
   const toggleCollapse = () => setCollapsed((prev) => !prev);
 
   // --- Data Loading ---
@@ -102,53 +105,75 @@ function MainApp({ toggleDarkMode }) {
       setMessages((msgs) => [...msgs, reply]);
       setInsights(data.insights || []);
     } catch {
-      setMessages((msgs) => [...msgs, { sender: "assistant", text: "Error!" }]);
+      setMessages((msgs) => [
+        ...msgs,
+        { sender: "assistant", text: "Error!" },
+      ]);
     }
     setLoading(false);
   };
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box sx={{ display: "flex", height: "100vh", minWidth: 0 }}>
       <CssBaseline />
 
-      {/* Sidebar Drawer */}
-      {!collapsed && (
-        <Drawer
-          variant="permanent"
-          open
-          sx={{
-            "& .MuiDrawer-paper": {
-              width: drawerWidth,
-              transition: "width 0.25s",
-              position: "relative",
-            },
-          }}
-        >
-          <SideMenu
-            onLogout={logout}
-            onToggleDarkMode={toggleDarkMode}
-            onNewChat={handleNewChat}
-            sessions={sessions}
-            onSelectSession={(id) => setActiveSession(id)}
-            collapsed={collapsed}
-            toggleCollapse={toggleCollapse}
-          />
-          {/* Actual draggable handle */}
-          <div
-            className="resize-handle"
-            onMouseDown={startResize}
-          ></div>
-        </Drawer>
-
-      )}
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: collapsed ? 0 : drawerWidth,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: collapsed ? 0 : drawerWidth,
+            boxSizing: "border-box",
+            position: "relative",
+            transition: "width 0.25s",
+            borderRight: "1px solid rgba(0,0,0,0.12)",
+            height: "100vh",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            padding: 0,
+          },
+        }}
+        open={!collapsed}
+      >
+        {!collapsed && (
+          <>
+            <SideMenu
+              onLogout={logout}
+              onToggleDarkMode={toggleDarkMode}
+              onNewChat={handleNewChat}
+              sessions={sessions}
+              onSelectSession={(id) => setActiveSession(id)}
+              collapsed={collapsed}
+              toggleCollapse={toggleCollapse}
+            />
+            <div
+              className="resize-handle"
+              onMouseDown={startResize}
+              style={{
+                width: 6,
+                cursor: "col-resize",
+                backgroundColor: "transparent",
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 0,
+                transition: "background 0.2s",
+                zIndex: 10,
+              }}
+            ></div>
+          </>
+        )}
+      </Drawer>
 
       {/* Top bar */}
       <AppBar
         position="fixed"
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          ml: collapsed ? 0 : `${drawerWidth}px`,
-          width: collapsed ? "100%" : `calc(100% - ${drawerWidth}px)`,
+          ml: collapsed ? 0 : `${drawerWidth}px`,              // AppBar starts right of Drawer
+          width: collapsed ? "100%" : `calc(100% - ${drawerWidth}px)`, // AppBar doesn't overlay Drawer
           transition: "all 0.25s ease",
         }}
       >
@@ -169,10 +194,13 @@ function MainApp({ toggleDarkMode }) {
         component="main"
         sx={{
           flexGrow: 1,
+          minWidth: 0,
+          height: "100vh",
           p: 3,
           pt: "80px",
-          ml: collapsed ? 0 : `${drawerWidth}px`,
-          transition: "margin 0.25s ease",
+          transition: "margin 0.25s ease, width 0.25s ease",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <ChatComponent messages={messages} onSend={handleSend} loading={loading} />
@@ -188,14 +216,18 @@ function AuthScreen() {
     <Container maxWidth="sm">
       <Register onRegistered={() => setShowRegister(false)} />
       <Box textAlign="center" mt={2}>
-        <Button onClick={() => setShowRegister(false)}>Already have an account? Login</Button>
+        <Button onClick={() => setShowRegister(false)}>
+          Already have an account? Login
+        </Button>
       </Box>
     </Container>
   ) : (
     <Container maxWidth="sm">
       <Login onLoggedIn={() => {}} />
       <Box textAlign="center" mt={2}>
-        <Button onClick={() => setShowRegister(true)}>Don't have an account? Register</Button>
+        <Button onClick={() => setShowRegister(true)}>
+          Don't have an account? Register
+        </Button>
       </Box>
     </Container>
   );

@@ -1,3 +1,4 @@
+// interface/src/SideMenu.js
 import React, { useState } from "react";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -40,12 +41,16 @@ const SideMenu = ({
     <div className="SideMenu-wrapper">
       {/* ===== Header Row ===== */}
       <div className="SideMenu-top">
-        <h3 style={{ margin: 0 }}>Menu</h3>
-        <IconButton onClick={toggleCollapse} size="small">
+        <h3 className="side-menu-title">Menu</h3>
+        <IconButton
+          onClick={toggleCollapse}
+          size="small"
+          className="side-menu-collapse-btn"
+          aria-label={collapsed ? "Open menu" : "Close menu"}
+        >
           {collapsed ? <ChevronRight /> : <ChevronLeft />}
         </IconButton>
       </div>
-
       <Divider />
 
       {/* ===== Menu Content ===== */}
@@ -61,7 +66,6 @@ const SideMenu = ({
             </ListItemButton>
           </ListItem>
         </List>
-
         <Divider />
 
         {/* Sessions List */}
@@ -83,7 +87,6 @@ const SideMenu = ({
             </ListItem>
           )}
         </List>
-
         <Divider />
 
         {/* ===== Permissions Toggle Section ===== */}
