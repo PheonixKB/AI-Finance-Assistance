@@ -120,21 +120,26 @@ function MainApp({ toggleDarkMode }) {
             "& .MuiDrawer-paper": {
               width: drawerWidth,
               transition: "width 0.25s",
+              position: "relative",
             },
           }}
         >
-          <div onMouseDown={startResize}>
-            <SideMenu
-              onLogout={logout}
-              onToggleDarkMode={toggleDarkMode}
-              onNewChat={handleNewChat}
-              sessions={sessions}
-              onSelectSession={(id) => setActiveSession(id)}
-              collapsed={collapsed}
-              toggleCollapse={toggleCollapse}
-            />
-          </div>
+          <SideMenu
+            onLogout={logout}
+            onToggleDarkMode={toggleDarkMode}
+            onNewChat={handleNewChat}
+            sessions={sessions}
+            onSelectSession={(id) => setActiveSession(id)}
+            collapsed={collapsed}
+            toggleCollapse={toggleCollapse}
+          />
+          {/* Actual draggable handle */}
+          <div
+            className="resize-handle"
+            onMouseDown={startResize}
+          ></div>
         </Drawer>
+
       )}
 
       {/* Top bar */}

@@ -8,22 +8,32 @@
   border-right: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-/* Resize handle */
-.MuiDrawer-paper::after {
-  content: "";
+/* Drawer styling */
+.MuiDrawer-paper {
+  box-sizing: border-box;
+  position: relative;
+  width: var(--drawer-width, 280px) !important;
+  transition: width 0.25s ease;
+  overflow: hidden;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* The resize handle between sidebar and main content */
+.resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  background-color: transparent;
   position: absolute;
   top: 0;
   right: 0;
-  width: 5px;
-  height: 100%;
-  cursor: col-resize;
-  background-color: transparent;
-  transition: background 0.2s ease;
+  bottom: 0;
+  transition: background 0.2s;
 }
 
-.MuiDrawer-paper:hover::after {
+.resize-handle:hover {
   background-color: rgba(0, 0, 0, 0.1);
 }
+
 
 /* Layout */
 .SideMenu-wrapper {
