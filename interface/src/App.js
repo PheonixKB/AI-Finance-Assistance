@@ -6,6 +6,7 @@ import {
   fetchMessages,
   addMessage,
   updateChatTitle,
+  deleteChatSession,
 } from "./apiService";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Login from "./Login";
@@ -104,6 +105,31 @@ function MainApp({ toggleDarkMode }) {
     }
   };
 
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      await deleteChatSession(sessionId, token);
+      setSessions((prevSessions) => {
+        const updatedSessions = prevSessions.filter((s) => s.id !== sessionId);
+        if (activeSession === sessionId) {
+          // If the deleted session was the active one, activate the previous one
+          const deletedIndex = prevSessions.findIndex((s) => s.id === sessionId);
+          if (deletedIndex > 0) {
+            setActiveSession(prevSessions[deletedIndex - 1].id);
+          } else if (updatedSessions.length > 0) {
+            // If the first session was deleted, activate the new first session
+            setActiveSession(updatedSessions[0].id);
+          } else {
+            setActiveSession(null);
+            setMessages([]);
+          }
+        }
+        return updatedSessions;
+      });
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    }
+  };
+
   const handleSend = async (query) => {
     if (!activeSession) return alert("Please create or select a chat first!");
     setLoading(true);
@@ -161,6 +187,7 @@ function MainApp({ toggleDarkMode }) {
               collapsed={collapsed}
               toggleCollapse={toggleCollapse}
               onUpdateTitle={handleUpdateTitle}
+              onDeleteSession={handleDeleteSession}
             />
             <div
               className="resize-handle"

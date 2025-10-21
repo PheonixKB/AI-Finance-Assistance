@@ -101,3 +101,34 @@ def update_chat_title(session_id: int, payload: UpdateChatTitle, request: Reques
     finally:
         cursor.close()
         conn.close()
+
+# Delete session
+@router.delete("/sessions/{session_id}")
+def delete_chat_session(session_id: int, request: Request):
+    current_user = get_current_user(request)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Check if session exists and belongs to the user
+        cursor.execute(
+            "SELECT id FROM chat_sessions WHERE id = %s AND user_id = %s",
+            (session_id, current_user["id"])
+        )
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Session not found or permission denied")
+
+        # Delete messages associated with the session
+        cursor.execute(
+            "DELETE FROM chat_messages WHERE session_id = %s",
+            (session_id,)
+        )
+        # Delete the session itself
+        cursor.execute(
+            "DELETE FROM chat_sessions WHERE id = %s",
+            (session_id,)
+        )
+        conn.commit()
+        return {"success": True}
+    finally:
+        cursor.close()
+        conn.close()

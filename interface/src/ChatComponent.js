@@ -63,161 +63,171 @@ function ChatComponent({ messages, onSend, loading}) {
     alert("Message copied!");
   };
 
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        height: "70vh",
-        borderRadius: 3,
-        p: 2,
-        bgcolor:
-          theme.palette.mode === "dark"
-            ? "rgba(255,255,255,0.06)"
-            : "rgba(0,0,0,0.03)",
-      }}
-    >
-      {/* Copy Chat Button */}
-      <Box display="flex" justifyContent="flex-end" mb={1}>
-        <Tooltip title="Copy chat as text">
-          <IconButton size="small" onClick={handleCopyChat} aria-label="Copy chat">
-            <ContentCopyIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      {/* Message List */}
+    return (
       <Box
         sx={{
-          flexGrow: 1,
-          overflowY: "auto",
-          mb: 2,
-          px: 1,
           display: "flex",
           flexDirection: "column",
-          gap: 1.5,
+          height: "100%", // Use 100% height to allow centering
+          borderRadius: 3,
+          p: 2,
+          bgcolor:
+            theme.palette.mode === "dark"
+              ? "rgba(255,255,255,0.06)"
+              : "rgba(0,0,0,0.03)",
+          justifyContent: messages.length === 0 ? "center" : "flex-start", // Center if no messages
+          alignItems: messages.length === 0 ? "center" : "stretch", // Center if no messages
         }}
       >
-        {messages.map((msg, idx) => (
-          <Stack
-            key={idx}
-            direction="row"
-            spacing={1.5}
-            alignItems="flex-start"
-            justifyContent={msg.sender === "user" ? "flex-end" : "flex-start"}
-          >
-            {msg.sender === "assistant" && (
-              <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-                <AssistantIcon />
-              </Avatar>
-            )}
+        {messages.length > 0 && (
+          <>
+            {/* Copy Chat Button */}
+            <Box display="flex" justifyContent="flex-end" mb={1}>
+              <Tooltip title="Copy chat as text">
+                <IconButton size="small" onClick={handleCopyChat} aria-label="Copy chat">
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+  
+            {/* Message List */}
             <Box
-              className={`message ${msg.sender}`}
               sx={{
-                position: "relative",
-                bgcolor:
-                  msg.sender === "user"
-                    ? theme.palette.primary.main
-                    : theme.palette.background.paper,
-                color:
-                  msg.sender === "user"
-                    ? theme.palette.primary.contrastText
-                    : theme.palette.text.primary,
-                p: 1.5,
-                borderRadius: 2,
-                maxWidth: "80%",
-                wordWrap: "break-word",
-                whiteSpace: "pre-wrap",
-                boxShadow: 1,
+                flexGrow: 1,
+                overflowY: "auto",
+                mb: 2,
+                px: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
               }}
             >
-              {/* Message content */}
-              <div className="markdown-content">
-                <ReactMarkdown>{msg.text}</ReactMarkdown>
-              </div>
-              {/* Copy single message button */}
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
-                  mt: 0.5,
-                }}
-              >
-                <Tooltip title="Copy message">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopyMsg(msg)}
+              {messages.map((msg, idx) => (
+                <Stack
+                  key={idx}
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="flex-start"
+                  justifyContent={msg.sender === "user" ? "flex-end" : "flex-start"}
+                >
+                  {msg.sender === "assistant" && (
+                    <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                      <AssistantIcon />
+                    </Avatar>
+                  )}
+                  <Box
+                    className={`message ${msg.sender}`}
                     sx={{
-                      opacity: 0.6,
-                      "&:hover": { opacity: 1 },
-                      transform: "scale(0.9)",
+                      position: "relative",
+                      bgcolor:
+                        msg.sender === "user"
+                          ? theme.palette.primary.main
+                          : theme.palette.background.paper,
+                      color:
+                        msg.sender === "user"
+                          ? theme.palette.primary.contrastText
+                          : theme.palette.text.primary,
+                      p: 1.5,
+                      borderRadius: 2,
+                      maxWidth: "80%",
+                      wordWrap: "break-word",
+                      whiteSpace: "pre-wrap",
+                      boxShadow: 1,
                     }}
                   >
-                    <ContentCopyIcon fontSize="inherit" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
+                    {/* Message content */}
+                    <div className="markdown-content">
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    </div>
+                    {/* Copy single message button */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
+                        mt: 0.5,
+                      }}
+                    >
+                      <Tooltip title="Copy message">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleCopyMsg(msg)}
+                          sx={{
+                            opacity: 0.6,
+                            "&:hover": { opacity: 1 },
+                            transform: "scale(0.9)",
+                          }}
+                        >
+                          <ContentCopyIcon fontSize="inherit" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
+                  {msg.sender === "user" && (
+                    <Avatar>
+                      <PersonIcon />
+                    </Avatar>
+                  )}
+                </Stack>
+              ))}
             </Box>
-            {msg.sender === "user" && (
-              <Avatar>
-                <PersonIcon />
-              </Avatar>
-            )}
-          </Stack>
-        ))}
-      </Box>
-
-      {/* Input Box */}
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: "flex", gap: 1, alignItems: "center" }}
-      >
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Send a message..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          multiline
-          maxRows={3}
-          disabled={loading}
-        />
-        <IconButton
-          color="primary"
-          type="submit"
-          disabled={loading || !input.trim()}
+          </>
+        )}
+  
+        {/* Input Box */}
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            display: "flex",
+            gap: 1,
+            alignItems: "center",
+            width: messages.length === 0 ? "50%" : "100%", // Adjust width if no messages
+            maxWidth: messages.length === 0 ? 600 : "none", // Max width for centering
+          }}
         >
-          {loading ? <CircularProgress size="1.5rem" /> : <SendIcon />}
-        </IconButton>
-        {/* Upload Button */}
-        <IconButton onClick={() => setUploadOpen(true)} color="primary" aria-label="Upload finance data">
-          <UploadFileIcon />
-        </IconButton>
-      </Box>
-
-      {/* Upload Modal */}
-      <Modal
-        open={uploadOpen}
-        onClose={() => setUploadOpen(false)}
-        sx={{ backdropFilter: "blur(3px)", backgroundColor: "rgba(0,0,0,0.2)" }}
-      >
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-          <Paper sx={{ p: 4, minWidth: 350, borderRadius: 3, boxShadow: 8, bgcolor: "background.paper", position: "relative" }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <b>Upload/Enter Finance Data</b>
-              <IconButton onClick={() => setUploadOpen(false)}>
-                ✖️
-              </IconButton>
-            </Box>
-            <FinanceUploadForm onSubmitted={() => setUploadOpen(false)} />
-          </Paper>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Send a message..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            multiline
+            maxRows={3}
+            disabled={loading}
+          />
+          <IconButton
+            color="primary"
+            type="submit"
+            disabled={loading || !input.trim()}
+          >
+            {loading ? <CircularProgress size="1.5rem" /> : <SendIcon />}
+          </IconButton>
+          {/* Upload Button */}
+          <IconButton onClick={() => setUploadOpen(true)} color="primary" aria-label="Upload finance data">
+            <UploadFileIcon />
+          </IconButton>
         </Box>
-      </Modal>
-    </Box>
-  );
-}
+  
+        {/* Upload Modal */}
+        <Modal
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          sx={{ backdropFilter: "blur(3px)", backgroundColor: "rgba(0,0,0,0.2)" }}
+        >
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+            <Paper sx={{ p: 4, minWidth: 350, borderRadius: 3, boxShadow: 8, bgcolor: "background.paper", position: "relative" }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <b>Upload/Enter Finance Data</b>
+                <IconButton onClick={() => setUploadOpen(false)}>
+                  ✖️
+                </IconButton>
+              </Box>
+              <FinanceUploadForm onSubmitted={() => setUploadOpen(false)} />
+            </Paper>
+          </Box>
+        </Modal>
+      </Box>
+    );}
 
 export default ChatComponent;

@@ -11,6 +11,8 @@ import {
   IconButton,
   Collapse,
   TextField,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   Add,
@@ -23,6 +25,8 @@ import {
   ExpandMore,
   ExpandLess,
   Edit,
+  MoreVert as MoreVertIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import PermissionToggle from "./PermissionToggle";
 import "./SideMenu.css";
@@ -37,15 +41,19 @@ const SideMenu = ({
   toggleCollapse,
   onUpdateTitle,
   activeSession,
+  onDeleteSession,
 }) => {
   const theme = useTheme();
   const [showPermissions, setShowPermissions] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [newTitle, setNewTitle] = useState("");
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuSessionId, setMenuSessionId] = useState(null);
 
   const handleEditClick = (sessionId, currentTitle) => {
     setEditingSessionId(sessionId);
     setNewTitle(currentTitle);
+    handleMenuClose();
   };
 
   const handleTitleChange = (e) => {
@@ -58,6 +66,21 @@ const SideMenu = ({
     }
     setEditingSessionId(null);
     setNewTitle("");
+  };
+
+  const handleMenuOpen = (event, sessionId) => {
+    setAnchorEl(event.currentTarget);
+    setMenuSessionId(sessionId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuSessionId(null);
+  };
+
+  const handleDeleteClick = (sessionId) => {
+    onDeleteSession(sessionId);
+    handleMenuClose();
   };
 
   return (
@@ -123,13 +146,28 @@ const SideMenu = ({
                     <ListItemText primary={s.title} />
                     <IconButton
                       size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(s.id, s.title);
-                      }}
+                      onClick={(e) => handleMenuOpen(e, s.id)}
                     >
-                      <Edit fontSize="small" />
+                      <MoreVertIcon fontSize="small" />
                     </IconButton>
+                    <Menu
+                      anchorEl={anchorEl}
+                      open={Boolean(anchorEl) && menuSessionId === s.id}
+                      onClose={handleMenuClose}
+                    >
+                      <MenuItem onClick={() => handleEditClick(s.id, s.title)}>
+                        <ListItemIcon>
+                          <Edit fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Edit</ListItemText>
+                      </MenuItem>
+                      <MenuItem onClick={() => handleDeleteClick(s.id)}>
+                        <ListItemIcon>
+                          <DeleteIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Delete</ListItemText>
+                      </MenuItem>
+                    </Menu>
                   </ListItemButton>
                 )}
               </ListItem>

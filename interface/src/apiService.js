@@ -173,4 +173,19 @@ export async function updateChatTitle(sessionId, title, token) {
   return await res.json();
 }
 
+// Delete session
+export async function deleteChatSession(sessionId, token) {
+  const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to delete session");
+  }
+  return { success: true };
+}
+
 export default apiService;
