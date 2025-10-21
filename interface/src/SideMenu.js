@@ -36,6 +36,7 @@ const SideMenu = ({
   collapsed,
   toggleCollapse,
   onUpdateTitle,
+  activeSession,
 }) => {
   const theme = useTheme();
   const [showPermissions, setShowPermissions] = useState(false);
@@ -112,7 +113,10 @@ const SideMenu = ({
                     sx={{ padding: "0 16px" }}
                   />
                 ) : (
-                  <ListItemButton onClick={() => onSelectSession(s.id)}>
+                  <ListItemButton
+                    onClick={() => onSelectSession(s.id)}
+                    selected={s.id === activeSession}
+                  >
                     <ListItemIcon>
                       <Chat />
                     </ListItemIcon>

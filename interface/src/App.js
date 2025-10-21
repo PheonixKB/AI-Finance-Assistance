@@ -157,6 +157,7 @@ function MainApp({ toggleDarkMode }) {
               onNewChat={handleNewChat}
               sessions={sessions}
               onSelectSession={(id) => setActiveSession(id)}
+              activeSession={activeSession}
               collapsed={collapsed}
               toggleCollapse={toggleCollapse}
               onUpdateTitle={handleUpdateTitle}
