@@ -224,11 +224,11 @@ function MainApp({ toggleDarkMode }) {
   );
 }
 
-function AuthScreen() {
+function AuthScreen({ toggleDarkMode }) {
   const [showRegister, setShowRegister] = useState(false);
   return showRegister ? (
     <Container maxWidth="sm">
-      <Register onRegistered={() => setShowRegister(false)} />
+      <Register onRegistered={() => setShowRegister(false)} toggleDarkMode={toggleDarkMode} onShowLogin={() => setShowRegister(false)} />
       <Box textAlign="center" mt={2}>
         <Button onClick={() => setShowRegister(false)}>
           Already have an account? Login
@@ -237,7 +237,7 @@ function AuthScreen() {
     </Container>
   ) : (
     <Container maxWidth="sm">
-      <Login onLoggedIn={() => {}} />
+      <Login onLoggedIn={() => {}} toggleDarkMode={toggleDarkMode} onShowRegister={() => setShowRegister(true)} />
       <Box textAlign="center" mt={2}>
         <Button onClick={() => setShowRegister(true)}>
           Don't have an account? Register
@@ -249,7 +249,7 @@ function AuthScreen() {
 
 function App({ toggleDarkMode }) {
   const { token } = useAuth();
-  return token ? <MainApp toggleDarkMode={toggleDarkMode} /> : <AuthScreen />;
+  return token ? <MainApp toggleDarkMode={toggleDarkMode} /> : <AuthScreen toggleDarkMode={toggleDarkMode} />;
 }
 
 export default function AppWrapper() {
