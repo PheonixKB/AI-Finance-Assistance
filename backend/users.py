@@ -3,22 +3,32 @@ import datetime
 import secrets
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import jwt
 from db import get_db_connection
 
-load_dotenv()
+# SendGrid Imports
+import sendgrid
+from sendgrid.helpers.mail import Mail
 
+load_dotenv()
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
 ALGORITHM = "HS256"
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 
 class UserCreate(BaseModel):
+    email: EmailStr
     username: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
     password: str
 
 # Decode JWT and return user
@@ -33,10 +43,10 @@ def get_current_user(request: Request):
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload["sub"]
+        email = payload["sub"]
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, username FROM users WHERE username=%s", (username,))
+        cursor.execute("SELECT id, email, username FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
@@ -46,43 +56,70 @@ def get_current_user(request: Request):
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+# Helper function to send email
+async def send_welcome_email(recipient_email: str, username: str):
+    if not SENDGRID_API_KEY or not SENDER_EMAIL:
+        print("SendGrid API key or sender email not configured. Skipping welcome email.")
+        return
+
+    message = Mail(
+        from_email=SENDER_EMAIL,
+        to_emails=recipient_email,
+        subject="Welcome to AI Finance Assistant!",
+        html_content=f"<strong>Hello {username},</strong><br>Welcome to AI Finance Assistant! We are excited to have you on board."
+    )
+    try:
+        sg = sendgrid.SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"Welcome email sent to {recipient_email}. Status Code: {response.status_code}")
+    except Exception as e:
+        print(f"Error sending welcome email to {recipient_email}: {e}")
+
 # Register
 @router.post("/register")
-def register(user: UserCreate):
+async def register(user: UserCreate):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
+        cursor.execute("SELECT id FROM users WHERE email=%s", (user.email,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Email already registered")
         cursor.execute("SELECT id FROM users WHERE username=%s", (user.username,))
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail="Username already exists")
+
         hashed = pwd_context.hash(user.password)
         now = datetime.datetime.utcnow()
         cursor.execute(
-            "INSERT INTO users (username, password_hash, created_at) VALUES (%s, %s, %s)",
-            (user.username, hashed, now),
+            "INSERT INTO users (email, username, password_hash, created_at) VALUES (%s, %s, %s, %s)",
+            (user.email, user.username, hashed, now),
         )
         user_id = cursor.lastrowid
         cursor.execute("INSERT INTO user_permissions (user_id) VALUES (%s)", (user_id,))
         conn.commit()
-        return {"message": "registered", "username": user.username}
+
+        # Send welcome email asynchronously
+        await send_welcome_email(user.email, user.username)
+
+        return {"message": "registered", "email": user.email, "username": user.username}
     finally:
         cursor.close()
         conn.close()
 
 # Login
 @router.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT id, username, password_hash FROM users WHERE username=%s",
+            "SELECT id, email, username, password_hash FROM users WHERE email=%s",
             (form_data.username,),
         )
         user = cursor.fetchone()
         if not user or not pwd_context.verify(form_data.password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        token = jwt.encode({"sub": user["username"]}, SECRET_KEY, algorithm=ALGORITHM)
+        token = jwt.encode({"sub": user["email"]}, SECRET_KEY, algorithm=ALGORITHM)
         return {"access_token": token, "token_type": "bearer"}
     finally:
         cursor.close()

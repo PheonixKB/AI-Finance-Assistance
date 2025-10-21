@@ -1,6 +1,7 @@
 // interface/src/Register.js
 import { useState } from "react";
-import { register } from "./apiService";
+import { register, login } from "./apiService";
+import { useAuth } from "./AuthContext";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -13,22 +14,26 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import { useTheme } from "@mui/material/styles";
 
 function Register({ onRegistered, toggleDarkMode, onShowLogin }) {
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
   const theme = useTheme();
+  const { login: doLogin } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr("");
     setSuccess("");
     try {
-      await register(username, password);
-      setSuccess("Registered! Please login.");
+      await register(email, username, password);
+      setSuccess("Registered! Attempting to log in...");
+      const data = await login(email, password);
+      doLogin(data.access_token);
       onRegistered();
     } catch (error) {
-      setErr("Register failed: " + error.message);
+      setErr("Registration or login failed: " + error.message);
     }
   };
 
@@ -55,11 +60,21 @@ function Register({ onRegistered, toggleDarkMode, onShowLogin }) {
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
         <form onSubmit={handleSubmit}>
           <TextField
+            label="Email"
+            fullWidth
+            margin="normal"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            required
+          />
+          <TextField
             label="Username"
             fullWidth
             margin="normal"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            required
           />
           <TextField
             label="Password"
@@ -68,6 +83,7 @@ function Register({ onRegistered, toggleDarkMode, onShowLogin }) {
             margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
           <Button
             variant="contained"

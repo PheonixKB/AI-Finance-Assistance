@@ -1,4 +1,3 @@
-// interface/src/apiService.js
 import {jwtDecode} from "jwt-decode"; // ✅ correct import
 
 const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:8000";
@@ -26,17 +25,11 @@ const request = async (endpoint, options = {}) => {
   return res.json();
 };
 
-const apiService = {
-  get: (endpoint) => request(endpoint),
-  post: (endpoint, body) => request(endpoint, { method: "POST", body: JSON.stringify(body) }),
-  // You can add other methods like put, delete etc. in a similar way
-};
-
-// Decode JWT to get username
+// Decode JWT to get user email
 function getUserFromToken(token) {
   if (!token) return null;
   const decoded = jwtDecode(token);
-  return { username: decoded.sub };
+  return { email: decoded.sub };
 }
 
 // ---------------------------
@@ -47,8 +40,7 @@ function getUserFromToken(token) {
 export async function fetchSessions(token) {
   if (!token) throw new Error("No token provided");
 
-  const user = getUserFromToken(token);
-  const res = await fetch(`${API_BASE}/chat/sessions/${user.username}`, {
+  const res = await fetch(`${API_BASE}/chat/sessions/user`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -110,19 +102,19 @@ export async function addMessage(sessionId, sender, text, token) {
 // Auth
 // ---------------------------
 
-export async function register(username, password) {
+export async function register(email, username, password) {
   const res = await fetch(`${API_BASE}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, username, password }),
   });
   if (!res.ok) throw new Error(await res.text());
   return await res.json();
 }
 
-export async function login(username, password) {
+export async function login(email, password) {
   const params = new URLSearchParams();
-  params.append("username", username);
+  params.append("username", email);
   params.append("password", password);
 
   const res = await fetch(`${API_BASE}/login`, {
@@ -188,4 +180,4 @@ export async function deleteChatSession(sessionId, token) {
   return { success: true };
 }
 
-export default apiService;
+export default {}; // Export an empty object for now, as apiService is not used directly. Functions are exported individually.

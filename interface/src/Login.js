@@ -14,7 +14,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import { useTheme } from "@mui/material/styles";
 
 function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const { login: doLogin } = useAuth();
@@ -24,7 +24,7 @@ function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
     e.preventDefault();
     setErr("");
     try {
-      const data = await login(username, password);
+      const data = await login(email, password);
       doLogin(data.access_token);
       onLoggedIn();
     } catch (error) {
@@ -54,11 +54,13 @@ function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
         {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
         <form onSubmit={handleSubmit}>
           <TextField
-            label="Username"
+            label="Email"
             fullWidth
             margin="normal"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            required
           />
           <TextField
             label="Password"
@@ -67,6 +69,7 @@ function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
             margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
           <Button
             variant="contained"

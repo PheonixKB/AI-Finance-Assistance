@@ -72,11 +72,26 @@ function MainApp({ toggleDarkMode }) {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const res = await fetchSessions(token);
-      setSessions(res);
-      if (res.length > 0) setActiveSession(res[0].id);
+      try {
+        const res = await fetchSessions(token);
+        setSessions(res);
+        if (res.length > 0) {
+          setActiveSession(res[0].id);
+        } else {
+          // Automatically create a new chat session if none exist
+          const newSession = await createSession(token, "New Chat");
+          setSessions([newSession]);
+          setActiveSession(newSession.id);
+        }
+      } catch (error) {
+        console.error("Error fetching or creating sessions:", error);
+        // If the error is due to an invalid token, log out the user
+        if (error.message.includes("Invalid token") || error.message.includes("Unauthorized")) {
+          logout();
+        }
+      }
     })();
-  }, [token]);
+  }, [token, logout]);
 
   useEffect(() => {
     if (!activeSession) return;
@@ -252,7 +267,7 @@ function MainApp({ toggleDarkMode }) {
 }
 
 function AuthScreen({ toggleDarkMode }) {
-  const [showRegister, setShowRegister] = useState(false);
+  const [showRegister, setShowRegister] = useState(true); // Default to Register
   return showRegister ? (
     <Container maxWidth="sm">
       <Register onRegistered={() => setShowRegister(false)} toggleDarkMode={toggleDarkMode} onShowLogin={() => setShowRegister(false)} />
