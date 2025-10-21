@@ -1,4 +1,4 @@
--- Finanace Assistant Database
+-- Finance Assistant Database
 CREATE DATABASE IF NOT EXISTS finance_assistant;
 USE finance_assistant;
 
@@ -29,17 +29,38 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
 );
 
--- User finance summary data (one row per user)
-CREATE TABLE IF NOT EXISTS user_finance (
+-- User summary data
+CREATE TABLE IF NOT EXISTS user_summary (
     user_id INT PRIMARY KEY,
-    cash INT,
-    bank INT,
-    loans INT,
-    credit_card INT,
-    mutual_funds INT,
-    stocks INT,
     epf_balance INT,
     credit_score INT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- User investments
+CREATE TABLE IF NOT EXISTS user_investments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    investment_type VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    quantity DECIMAL(15, 4) NOT NULL,
+    purchase_price DECIMAL(15, 2) NOT NULL,
+    current_price DECIMAL(15, 2),
+    purchase_date DATE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ✅ Move user_accounts BEFORE user_transactions
+CREATE TABLE IF NOT EXISTS user_accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    account_name VARCHAR(255) NOT NULL,
+    bank_name VARCHAR(255) NOT NULL,
+    account_number VARCHAR(255) NULL,
+    bank_number VARCHAR(255) NULL,
+    account_type VARCHAR(50),
+    balance DECIMAL(15, 2) DEFAULT 0.00,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -47,10 +68,12 @@ CREATE TABLE IF NOT EXISTS user_finance (
 CREATE TABLE IF NOT EXISTS user_transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    account_id INT NOT NULL,
     date DATE,
     descr VARCHAR(255),
     amount INT,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES user_accounts(id) ON DELETE CASCADE
 );
 
 -- User permissions for data access
