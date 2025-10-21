@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.models import CreateChatSession, AddMessage
+from models.models import CreateChatSession, AddMessage, UpdateChatTitle
 from db import get_db_connection
 from users import get_current_user
 
@@ -72,6 +72,32 @@ def get_user_sessions_by_username(username: str):
             (username,)
         )
         return cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
+# Update session title
+@router.put("/sessions/{session_id}/title")
+def update_chat_title(session_id: int, payload: UpdateChatTitle, request: Request):
+    current_user = get_current_user(request)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Check if session exists and belongs to the user
+        cursor.execute(
+            "SELECT id FROM chat_sessions WHERE id = %s AND user_id = %s",
+            (session_id, current_user["id"])
+        )
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Session not found or permission denied")
+
+        # Update title
+        cursor.execute(
+            "UPDATE chat_sessions SET title = %s WHERE id = %s",
+            (payload.title, session_id)
+        )
+        conn.commit()
+        return {"success": True, "title": payload.title}
     finally:
         cursor.close()
         conn.close()

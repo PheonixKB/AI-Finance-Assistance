@@ -155,4 +155,22 @@ export async function askFinanceAssistant(query, token) {
   return await res.json();
 }
 
+
+// Update session title
+export async function updateChatTitle(sessionId, title, token) {
+  const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}/title`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to update title");
+  }
+  return await res.json();
+}
+
 export default apiService;

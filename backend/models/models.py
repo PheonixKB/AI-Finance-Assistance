@@ -23,3 +23,6 @@ class AddMessage(BaseModel):
     session_id: int
     sender: str
     text: str
+
+class UpdateChatTitle(BaseModel):
+    title: str

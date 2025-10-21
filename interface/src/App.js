@@ -5,6 +5,7 @@ import {
   createSession,
   fetchMessages,
   addMessage,
+  updateChatTitle,
 } from "./apiService";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Login from "./Login";
@@ -92,6 +93,17 @@ function MainApp({ toggleDarkMode }) {
     setMessages([]);
   };
 
+  const handleUpdateTitle = async (sessionId, newTitle) => {
+    try {
+      await updateChatTitle(sessionId, newTitle, token);
+      setSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, title: newTitle } : s))
+      );
+    } catch (error) {
+      console.error("Failed to update title:", error);
+    }
+  };
+
   const handleSend = async (query) => {
     if (!activeSession) return alert("Please create or select a chat first!");
     setLoading(true);
@@ -147,6 +159,7 @@ function MainApp({ toggleDarkMode }) {
               onSelectSession={(id) => setActiveSession(id)}
               collapsed={collapsed}
               toggleCollapse={toggleCollapse}
+              onUpdateTitle={handleUpdateTitle}
             />
             <div
               className="resize-handle"

@@ -10,6 +10,7 @@ import {
   Divider,
   IconButton,
   Collapse,
+  TextField,
 } from "@mui/material";
 import {
   Add,
@@ -21,6 +22,7 @@ import {
   ChevronRight,
   ExpandMore,
   ExpandLess,
+  Edit,
 } from "@mui/icons-material";
 import PermissionToggle from "./PermissionToggle";
 import "./SideMenu.css";
@@ -33,9 +35,29 @@ const SideMenu = ({
   sessions = [],
   collapsed,
   toggleCollapse,
+  onUpdateTitle,
 }) => {
   const theme = useTheme();
   const [showPermissions, setShowPermissions] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [newTitle, setNewTitle] = useState("");
+
+  const handleEditClick = (sessionId, currentTitle) => {
+    setEditingSessionId(sessionId);
+    setNewTitle(currentTitle);
+  };
+
+  const handleTitleChange = (e) => {
+    setNewTitle(e.target.value);
+  };
+
+  const handleTitleUpdate = (sessionId) => {
+    if (newTitle.trim()) {
+      onUpdateTitle(sessionId, newTitle.trim());
+    }
+    setEditingSessionId(null);
+    setNewTitle("");
+  };
 
   return (
     <div className="SideMenu-wrapper">
@@ -73,12 +95,39 @@ const SideMenu = ({
           {sessions.length > 0 ? (
             sessions.map((s) => (
               <ListItem key={s.id} disablePadding>
-                <ListItemButton onClick={() => onSelectSession(s.id)}>
-                  <ListItemIcon>
-                    <Chat />
-                  </ListItemIcon>
-                  <ListItemText primary={s.title} />
-                </ListItemButton>
+                {editingSessionId === s.id ? (
+                  <TextField
+                    value={newTitle}
+                    onChange={handleTitleChange}
+                    onBlur={() => handleTitleUpdate(s.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleTitleUpdate(s.id);
+                      }
+                    }}
+                    size="small"
+                    variant="standard"
+                    fullWidth
+                    autoFocus
+                    sx={{ padding: "0 16px" }}
+                  />
+                ) : (
+                  <ListItemButton onClick={() => onSelectSession(s.id)}>
+                    <ListItemIcon>
+                      <Chat />
+                    </ListItemIcon>
+                    <ListItemText primary={s.title} />
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(s.id, s.title);
+                      }}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+                  </ListItemButton>
+                )}
               </ListItem>
             ))
           ) : (
