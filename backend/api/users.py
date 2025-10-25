@@ -2,45 +2,35 @@ import os
 import datetime
 import secrets
 from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from dotenv import load_dotenv
-from jose import jwt
-from db import get_db_connection
-
-# SendGrid Imports
+from jose import jwt, JWTError
+from database.db import get_db_connection
+from schemas.user_schemas import UserCreate, UserLogin, UserResponse, UserUpdate
 import sendgrid
 from sendgrid.helpers.mail import Mail
 
-load_dotenv()
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
-router = APIRouter()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
-ALGORITHM = "HS256"
+
+load_dotenv()
+SECRET_KEY= os.getenv("SECRET_KEY")
+ALGORITHM= "HS256"
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 
-class UserCreate(BaseModel):
-    email: EmailStr
-    username: str
-    password: str
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+router = APIRouter()
 
-# Decode JWT and return user
-def get_current_user(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        raise HTTPException(status_code=401, detail="Missing token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
 
-    scheme, _, token = auth_header.partition(" ")
-    if scheme.lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid auth scheme")
-
+# SendGrid Imports
+def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload["sub"]
@@ -53,7 +43,7 @@ def get_current_user(request: Request):
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         return user
-    except Exception:
+    except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # Helper function to send email
@@ -108,19 +98,50 @@ async def register(user: UserCreate):
 
 # Login
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(request: LoginRequest):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute(
             "SELECT id, email, username, password_hash FROM users WHERE email=%s",
-            (form_data.username,),
+            (request.email,),
         )
         user = cursor.fetchone()
-        if not user or not pwd_context.verify(form_data.password, user["password_hash"]):
+        if not user or not pwd_context.verify(request.password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         token = jwt.encode({"sub": user["email"]}, SECRET_KEY, algorithm=ALGORITHM)
         return {"access_token": token, "token_type": "bearer"}
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.get("/users/me", response_model=UserResponse)
+def read_users_me(current_user: dict = Depends(get_current_user)):
+    return current_user
+
+@router.put("/users/me", response_model=UserResponse)
+def update_users_me(user_update: UserUpdate, current_user: dict = Depends(get_current_user)):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        updates = []
+        values = []
+        if user_update.username is not None:
+            updates.append("username = %s")
+            values.append(user_update.username)
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        values.append(current_user["id"])
+        query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
+        cursor.execute(query, tuple(values))
+        conn.commit()
+
+        # Fetch updated user data
+        cursor.execute("SELECT id, email, username FROM users WHERE id=%s", (current_user["id"],))
+        updated_user = cursor.fetchone()
+        return updated_user
     finally:
         cursor.close()
         conn.close()

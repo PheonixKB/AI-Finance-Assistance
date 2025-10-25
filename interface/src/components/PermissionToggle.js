@@ -5,7 +5,7 @@ import FormGroup from "@mui/material/FormGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import apiService from "./apiService";
+import { get, post } from "../apiService";
 
 const categories = [
   { key: "assets", label: "Assets" },
@@ -22,7 +22,7 @@ function PermissionToggle() {
   useEffect(() => {
     const fetchPermissions = async () => {
       try {
-        const data = await apiService.get("/permissions/");
+        const data = await get("/permissions/", localStorage.getItem("token"));
         setPermissions(data);
       } catch (error) {
         console.error("Error fetching permissions:", error);
@@ -35,7 +35,7 @@ function PermissionToggle() {
     const newPermissions = { ...permissions, [key]: !permissions[key] };
     setPermissions(newPermissions);
     try {
-      await apiService.post("/permissions/", newPermissions);
+      await post("/permissions/", newPermissions, localStorage.getItem("token"));
     } catch (error) {
       console.error("Error updating permissions:", error);
       // Optionally revert the state if the API call fails

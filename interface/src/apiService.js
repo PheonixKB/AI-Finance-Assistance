@@ -1,4 +1,4 @@
-import {jwtDecode} from "jwt-decode"; // ✅ correct import
+import jwtDecode from "jwt-decode"; // ✅ correct import
 
 const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:8000";
 const API_BASE = `${BASE_URL}/api`;
@@ -6,6 +6,7 @@ const API_BASE = `${BASE_URL}/api`;
 const getToken = () => localStorage.getItem("token");
 
 const request = async (endpoint, options = {}) => {
+  console.log("API Request Endpoint:", endpoint);
   const token = getToken();
   const headers = {
     "Content-Type": "application/json",
@@ -18,6 +19,10 @@ const request = async (endpoint, options = {}) => {
   const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login"; // Redirect to login page
+    }
     const error = await res.text();
     throw new Error(error);
   }
@@ -25,12 +30,12 @@ const request = async (endpoint, options = {}) => {
   return res.json();
 };
 
-// Decode JWT to get user email
-function getUserFromToken(token) {
-  if (!token) return null;
-  const decoded = jwtDecode(token);
-  return { email: decoded.sub };
-}
+
+
+export const get = (endpoint, token) => request(endpoint, { method: "GET", headers: { Authorization: `Bearer ${token}` } });
+export const post = (endpoint, data, token) => request(endpoint, { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
+export const put = (endpoint, data, token) => request(endpoint, { method: "PUT", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
+export const del = (endpoint, token) => request(endpoint, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
 
 // ---------------------------
 // Chat sessions
@@ -113,14 +118,10 @@ export async function register(email, username, password) {
 }
 
 export async function login(email, password) {
-  const params = new URLSearchParams();
-  params.append("username", email);
-  params.append("password", password);
-
   const res = await fetch(`${API_BASE}/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();
@@ -178,6 +179,33 @@ export async function deleteChatSession(sessionId, token) {
     throw new Error(text || "Failed to delete session");
   }
   return { success: true };
+}
+
+// ---------------------------
+// User Profile
+// ---------------------------
+
+export async function fetchUserProfile(token) {
+  const res = await fetch(`${API_BASE}/users/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
+
+export async function updateUserProfile(userData, token) {
+  const res = await fetch(`${API_BASE}/users/me`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(userData),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
 }
 
 export default {}; // Export an empty object for now, as apiService is not used directly. Functions are exported individually.

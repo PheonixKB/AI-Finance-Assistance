@@ -1,7 +1,7 @@
-// interface/src/Login.js
+// interface/src/Register.js
 import { useState } from "react";
-import { useAuth } from "./AuthContext";
-import { login } from "./apiService";
+import { register, login } from "../apiService";
+import { useAuth } from "../AuthContext";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -13,22 +13,27 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import { useTheme } from "@mui/material/styles";
 
-function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
+function Register({ onRegistered, toggleDarkMode, onShowLogin }) {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
-  const { login: doLogin } = useAuth();
+  const [success, setSuccess] = useState("");
   const theme = useTheme();
+  const { login: doLogin } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr("");
+    setSuccess("");
     try {
+      await register(email, username, password);
+      setSuccess("Registered! Attempting to log in...");
       const data = await login(email, password);
       doLogin(data.access_token);
-      onLoggedIn();
+      onRegistered();
     } catch (error) {
-      setErr("Login failed: " + error.message);
+      setErr("Registration or login failed: " + error.message);
     }
   };
 
@@ -49,9 +54,10 @@ function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
           </IconButton>
         </Box>
         <Typography variant="h5" gutterBottom align="center">
-          Login to Finance Assistant
+          Register Account
         </Typography>
         {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
+        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
         <form onSubmit={handleSubmit}>
           <TextField
             label="Email"
@@ -60,6 +66,14 @@ function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
+            required
+          />
+          <TextField
+            label="Username"
+            fullWidth
+            margin="normal"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
           />
           <TextField
@@ -78,16 +92,16 @@ function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
             fullWidth
             sx={{ mt: 2 }}
           >
-            Login
+            Register
           </Button>
           <Button
             variant="text"
             color="primary"
             fullWidth
             sx={{ mt: 1 }}
-            onClick={onShowRegister}
+            onClick={onShowLogin}
           >
-            Don't have an account? Register
+            Already have an account? Login
           </Button>
         </form>
       </Paper>
@@ -95,4 +109,4 @@ function Login({ onLoggedIn, toggleDarkMode, onShowRegister }) {
   );
 }
 
-export default Login;
+export default Register;

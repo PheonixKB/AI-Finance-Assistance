@@ -1,20 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import {
-  askFinanceAssistant,
-  fetchSessions,
-  createSession,
-  fetchMessages,
-  addMessage,
-  updateChatTitle,
-  deleteChatSession,
-} from "./apiService";
-import { AuthProvider, useAuth } from "./AuthContext";
-import Login from "./Login";
-import Register from "./Register";
-import SideMenu from "./SideMenu";
-import ChatComponent from "./ChatComponent";
-import InsightsDisplay from "./InsightsDisplay";
-
+import { useState, useEffect } from "react";
 import {
   Box,
   Drawer,
@@ -28,9 +12,26 @@ import {
   createTheme,
   ThemeProvider,
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-
-function MainApp({ toggleDarkMode }) {
+import {
+  askFinanceAssistant,
+  fetchSessions,
+  createSession,
+  fetchMessages,
+  addMessage,
+  updateChatTitle,
+  deleteChatSession,
+} from "./apiService";
+import { AuthProvider, useAuth } from "./AuthContext";
+import Login from "./auth/Login";
+import Register from "./auth/Register";
+import SideMenu from "./components/SideMenu";
+import ChatComponent from "./components/ChatComponent";
+import InsightsDisplay from "./components/InsightsDisplay";
+import ProfilePage from "./pages/ProfilePage"; // Import ProfilePage
+import UploadPage from "./pages/UploadPage"; // Import UploadPage
+import Layout from "./components/Layout";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+function AppContent({ toggleDarkMode }) {
   const { token, logout } = useAuth();
   const [messages, setMessages] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -38,57 +39,26 @@ function MainApp({ toggleDarkMode }) {
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [drawerWidth, setDrawerWidth] = useState(280);
-  const [collapsed, setCollapsed] = useState(false);
-  const isResizing = useRef(false);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--drawer-width",
-      `${collapsed ? 0 : drawerWidth}px`
-    );
-  }, [drawerWidth, collapsed]);
-
-  // --- Resize Logic ---
-  const startResize = (e) => {
-    if (collapsed) return;
-    isResizing.current = true;
-    document.addEventListener("mousemove", resizeDrawer);
-    document.addEventListener("mouseup", stopResize);
-  };
-  const resizeDrawer = (e) => {
-    if (!isResizing.current) return;
-    const newWidth = Math.min(Math.max(e.clientX, 180), 480);
-    setDrawerWidth(newWidth);
-  };
-  const stopResize = () => {
-    isResizing.current = false;
-    document.removeEventListener("mousemove", resizeDrawer);
-    document.removeEventListener("mouseup", stopResize);
-  };
-  const toggleCollapse = () => setCollapsed((prev) => !prev);
-
   // --- Data Loading ---
   useEffect(() => {
     if (!token) return;
+    console.log("Fetching sessions or creating new chat...");
     (async () => {
       try {
         const res = await fetchSessions(token);
+        console.log("Fetched sessions:", res);
         setSessions(res);
         if (res.length > 0) {
           setActiveSession(res[0].id);
         } else {
           // Automatically create a new chat session if none exist
           const newSession = await createSession(token, "New Chat");
+          console.log("Creating new session:", newSession);
           setSessions([newSession]);
           setActiveSession(newSession.id);
         }
       } catch (error) {
         console.error("Error fetching or creating sessions:", error);
-        // If the error is due to an invalid token, log out the user
-        if (error.message.includes("Invalid token") || error.message.includes("Unauthorized")) {
-          logout();
-        }
       }
     })();
   }, [token, logout]);
@@ -96,17 +66,24 @@ function MainApp({ toggleDarkMode }) {
   useEffect(() => {
     if (!activeSession) return;
     (async () => {
-      const res = await fetchMessages(activeSession);
+      const res = await fetchMessages(activeSession, token);
       setMessages(res);
     })();
-  }, [activeSession]);
+  }, [activeSession, token]);
 
   const handleNewChat = async () => {
-    const title = `Chat ${sessions.length + 1}`;
-    const newSession = await createSession(token, title);
-    setSessions((prev) => [newSession, ...prev]);
-    setActiveSession(newSession.id);
-    setMessages([]);
+    try {
+      const title = `Chat ${sessions.length + 1}`;
+      const newSession = await createSession(token, title);
+      console.log("New session created:", newSession);
+      const updatedSessions = await fetchSessions(token);
+      setSessions(updatedSessions);
+      setActiveSession(newSession.id);
+      setMessages([]);
+    } catch (error) {
+      console.error("Error creating new chat session:", error);
+      alert("Failed to create new chat session: " + error.message);
+    }
   };
 
   const handleUpdateTitle = async (sessionId, newTitle) => {
@@ -126,12 +103,10 @@ function MainApp({ toggleDarkMode }) {
       setSessions((prevSessions) => {
         const updatedSessions = prevSessions.filter((s) => s.id !== sessionId);
         if (activeSession === sessionId) {
-          // If the deleted session was the active one, activate the previous one
           const deletedIndex = prevSessions.findIndex((s) => s.id === sessionId);
           if (deletedIndex > 0) {
             setActiveSession(prevSessions[deletedIndex - 1].id);
           } else if (updatedSessions.length > 0) {
-            // If the first session was deleted, activate the new first session
             setActiveSession(updatedSessions[0].id);
           } else {
             setActiveSession(null);
@@ -150,11 +125,11 @@ function MainApp({ toggleDarkMode }) {
     setLoading(true);
     const userMsg = { sender: "user", text: query };
     setMessages((msgs) => [...msgs, userMsg]);
-    await addMessage(activeSession, "user", query);
+    await addMessage(activeSession, "user", query, token);
     try {
       const data = await askFinanceAssistant(query, token);
       const reply = { sender: "assistant", text: data.answer };
-      await addMessage(activeSession, "assistant", data.answer);
+      await addMessage(activeSession, "assistant", data.answer, token);
       setMessages((msgs) => [...msgs, reply]);
       setInsights(data.insights || []);
     } catch {
@@ -167,121 +142,56 @@ function MainApp({ toggleDarkMode }) {
   };
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", minWidth: 0 }}>
-      <CssBaseline />
-
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: collapsed ? 0 : drawerWidth,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: collapsed ? 0 : drawerWidth,
-            boxSizing: "border-box",
-            position: "relative",
-            transition: "width 0.25s",
-            borderRight: "1px solid rgba(0,0,0,0.12)",
-            height: "100vh",
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            padding: 0,
-          },
-        }}
-        open={!collapsed}
-      >
-        {!collapsed && (
-          <>
-            <SideMenu
-              onLogout={logout}
-              onToggleDarkMode={toggleDarkMode}
+    <Routes>
+      <Route path="/login" element={token ? <Navigate to="/" /> : <LoginScreen toggleDarkMode={toggleDarkMode} />} />
+      <Route path="/register" element={token ? <Navigate to="/" /> : <RegisterScreen toggleDarkMode={toggleDarkMode} />} />
+      <Route path="/profile" element={token ? <Layout toggleDarkMode={toggleDarkMode} onNewChat={handleNewChat} sessions={sessions} onSelectSession={setActiveSession} activeSession={activeSession} onUpdateTitle={handleUpdateTitle} onDeleteSession={handleDeleteSession}><ProfilePage /></Layout> : <Navigate to="/login" />} />
+      <Route path="/upload" element={token ? <Layout toggleDarkMode={toggleDarkMode} onNewChat={handleNewChat} sessions={sessions} onSelectSession={setActiveSession} activeSession={activeSession} onUpdateTitle={handleUpdateTitle} onDeleteSession={handleDeleteSession}><UploadPage onSubmitting={() => {}} /></Layout> : <Navigate to="/login" />} />
+      <Route
+        path="/"
+        element={
+          token ? (
+            <Layout
+              toggleDarkMode={toggleDarkMode}
               onNewChat={handleNewChat}
               sessions={sessions}
-              onSelectSession={(id) => setActiveSession(id)}
+              onSelectSession={setActiveSession}
               activeSession={activeSession}
-              collapsed={collapsed}
-              toggleCollapse={toggleCollapse}
               onUpdateTitle={handleUpdateTitle}
               onDeleteSession={handleDeleteSession}
-            />
-            <div
-              className="resize-handle"
-              onMouseDown={startResize}
-              style={{
-                width: 6,
-                cursor: "col-resize",
-                backgroundColor: "transparent",
-                position: "absolute",
-                top: 0,
-                right: 0,
-                bottom: 0,
-                transition: "background 0.2s",
-                zIndex: 10,
-              }}
-            ></div>
-          </>
-        )}
-      </Drawer>
-
-      {/* Top bar */}
-      <AppBar
-        position="fixed"
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          ml: collapsed ? 0 : `${drawerWidth}px`,              // AppBar starts right of Drawer
-          width: collapsed ? "100%" : `calc(100% - ${drawerWidth}px)`, // AppBar doesn't overlay Drawer
-          transition: "all 0.25s ease",
-        }}
-      >
-        <Toolbar>
-          {collapsed && (
-            <IconButton color="inherit" onClick={toggleCollapse} edge="start" sx={{ mr: 2 }}>
-              <MenuIcon />
-            </IconButton>
-          )}
-          <Typography variant="h6" noWrap>
-            Finance AI Assistant
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      {/* Main Content */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          minWidth: 0,
-          height: "100vh",
-          p: 3,
-          pt: "80px",
-          transition: "margin 0.25s ease, width 0.25s ease",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <ChatComponent messages={messages} onSend={handleSend} loading={loading} />
-        <InsightsDisplay insights={insights} />
-      </Box>
-    </Box>
+            >
+              <MainAppContent
+                messages={messages}
+                onSend={handleSend}
+                loading={loading}
+                insights={insights}
+              />
+            </Layout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+    </Routes>
   );
 }
 
-function AuthScreen({ toggleDarkMode }) {
-  const [showRegister, setShowRegister] = useState(true); // Default to Register
-  return showRegister ? (
+function MainAppContent({ messages, onSend, loading, insights }) {
+  return (
+    <>
+      <ChatComponent messages={messages} onSend={onSend} loading={loading} />
+      <InsightsDisplay insights={insights} />
+    </>
+  );
+}
+
+function LoginScreen({ toggleDarkMode }) {
+  const navigate = useNavigate();
+  return (
     <Container maxWidth="sm">
-      <Register onRegistered={() => setShowRegister(false)} toggleDarkMode={toggleDarkMode} onShowLogin={() => setShowRegister(false)} />
+      <Login onLoggedIn={() => {}} toggleDarkMode={toggleDarkMode} onShowRegister={() => navigate("/register")} />
       <Box textAlign="center" mt={2}>
-        <Button onClick={() => setShowRegister(false)}>
-          Already have an account? Login
-        </Button>
-      </Box>
-    </Container>
-  ) : (
-    <Container maxWidth="sm">
-      <Login onLoggedIn={() => {}} toggleDarkMode={toggleDarkMode} onShowRegister={() => setShowRegister(true)} />
-      <Box textAlign="center" mt={2}>
-        <Button onClick={() => setShowRegister(true)}>
+        <Button onClick={() => navigate("/register")}>
           Don't have an account? Register
         </Button>
       </Box>
@@ -289,25 +199,47 @@ function AuthScreen({ toggleDarkMode }) {
   );
 }
 
-function App({ toggleDarkMode }) {
-  const { token } = useAuth();
-  return token ? <MainApp toggleDarkMode={toggleDarkMode} /> : <AuthScreen toggleDarkMode={toggleDarkMode} />;
+function RegisterScreen({ toggleDarkMode }) {
+  const navigate = useNavigate();
+  return (
+    <Container maxWidth="sm">
+      <Register onRegistered={() => navigate("/login")} toggleDarkMode={toggleDarkMode} onShowLogin={() => navigate("/login")} />
+      <Box textAlign="center" mt={2}>
+        <Button onClick={() => navigate("/login")}>
+          Already have an account? Login
+        </Button>
+      </Box>
+    </Container>
+  );
 }
 
 export default function AppWrapper() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    return savedTheme === "dark";
+  });
   const theme = createTheme({
     palette: {
       mode: darkMode ? "dark" : "light",
     },
   });
 
+  const toggleDarkMode = () => {
+    setDarkMode((prevMode) => {
+      const newMode = !prevMode;
+      localStorage.setItem("theme", newMode ? "dark" : "light");
+      return newMode;
+    });
+  };
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <App toggleDarkMode={() => setDarkMode(!darkMode)} />
-      </AuthProvider>
-    </ThemeProvider>
+    <Router>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <AppContent toggleDarkMode={toggleDarkMode} />
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
 }

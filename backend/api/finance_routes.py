@@ -1,63 +1,23 @@
 # backend/finance_data.py
 
-from fastapi import APIRouter, Request, HTTPException
-from pydantic import BaseModel
-from users import get_current_user
-from db import get_db_connection
+from fastapi import APIRouter, Request, HTTPException, Depends
+from database.db import get_db_connection
 from datetime import date
+from .users import get_current_user
+from schemas.finance_schemas import (
+    InvestmentCreate,
+    InvestmentUpdate,
+    AccountCreate,
+    AccountUpdate,
+    SummaryFinanceUpdate,
+    TransactionCreate,
+    TransactionUpdate,
+)
 
 upload_router = APIRouter()
 
-class InvestmentCreate(BaseModel):
-    investment_type: str
-    name: str
-    quantity: float
-    purchase_price: float
-    current_price: float | None = None
-    purchase_date: date | None = None
-
-class InvestmentUpdate(BaseModel):
-    investment_type: str | None = None
-    name: str | None = None
-    quantity: float | None = None
-    purchase_price: float | None = None
-    current_price: float | None = None
-    purchase_date: date | None = None
-
-class AccountCreate(BaseModel):
-    account_name: str
-    bank_name: str
-    account_number: str
-    bank_number: str
-    account_type: str
-    balance: float = 0.0
-
-class AccountUpdate(BaseModel):
-    account_name: str | None = None
-    bank_name: str | None = None
-    account_number: str | None = None
-    bank_number: str | None = None
-    account_type: str | None = None
-    balance: float | None = None
-
-class SummaryFinanceUpdate(BaseModel):
-    credit_score: int | None = None
-    epf_balance: int | None = None
-
-class TransactionCreate(BaseModel):
-    account_id: int
-    date: str # YYYY-MM-DD
-    descr: str
-    amount: float
-
-class TransactionUpdate(BaseModel):
-    date: str | None = None
-    descr: str | None = None
-    amount: float | None = None
-
 @upload_router.put("/summary_finance")
-async def update_summary_finance(request: Request, data: SummaryFinanceUpdate):
-    user = get_current_user(request)
+async def update_summary_finance(data: SummaryFinanceUpdate, user: dict = Depends(get_current_user)):
     user_id = user["id"]
     updates = {k: v for k, v in data.dict(exclude_unset=True).items() if v is not None}
     if not updates:
@@ -82,8 +42,7 @@ async def update_summary_finance(request: Request, data: SummaryFinanceUpdate):
         conn.close()
 
 @upload_router.get("/summary_finance")
-async def get_summary_finance(request: Request):
-    user = get_current_user(request)
+async def get_summary_finance(user: dict = Depends(get_current_user)):
     user_id = user["id"]
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -96,8 +55,7 @@ async def get_summary_finance(request: Request):
         conn.close()
 
 @upload_router.post("/investments")
-async def create_investment(request: Request, investment: InvestmentCreate):
-    user = get_current_user(request)
+async def create_investment(investment: InvestmentCreate, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -112,8 +70,7 @@ async def create_investment(request: Request, investment: InvestmentCreate):
         conn.close()
 
 @upload_router.put("/investments/{investment_id}")
-async def update_investment(investment_id: int, request: Request, investment: InvestmentUpdate):
-    user = get_current_user(request)
+async def update_investment(investment_id: int, investment: InvestmentUpdate, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -137,8 +94,7 @@ async def update_investment(investment_id: int, request: Request, investment: In
         conn.close()
 
 @upload_router.delete("/investments/{investment_id}")
-async def delete_investment(investment_id: int, request: Request):
-    user = get_current_user(request)
+async def delete_investment(investment_id: int, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -154,8 +110,7 @@ async def delete_investment(investment_id: int, request: Request):
         conn.close()
 
 @upload_router.get("/investments")
-async def get_investments(request: Request):
-    user = get_current_user(request)
+async def get_investments(user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -166,8 +121,7 @@ async def get_investments(request: Request):
         conn.close()
 
 @upload_router.post("/accounts")
-async def create_account(request: Request, account: AccountCreate):
-    user = get_current_user(request)
+async def create_account(account: AccountCreate, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -182,8 +136,7 @@ async def create_account(request: Request, account: AccountCreate):
         conn.close()
 
 @upload_router.put("/accounts/{account_id}")
-async def update_account(account_id: int, request: Request, account: AccountUpdate):
-    user = get_current_user(request)
+async def update_account(account_id: int, account: AccountUpdate, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -208,8 +161,7 @@ async def update_account(account_id: int, request: Request, account: AccountUpda
         conn.close()
 
 @upload_router.delete("/accounts/{account_id}")
-async def delete_account(account_id: int, request: Request):
-    user = get_current_user(request)
+async def delete_account(account_id: int, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -226,8 +178,7 @@ async def delete_account(account_id: int, request: Request):
         conn.close()
 
 @upload_router.get("/accounts")
-async def get_accounts(request: Request):
-    user = get_current_user(request)
+async def get_accounts(user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -238,8 +189,7 @@ async def get_accounts(request: Request):
         conn.close()
 
 @upload_router.post("/transactions")
-async def create_transaction(request: Request, transaction: TransactionCreate):
-    user = get_current_user(request)
+async def create_transaction(transaction: TransactionCreate, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -259,8 +209,7 @@ async def create_transaction(request: Request, transaction: TransactionCreate):
         conn.close()
 
 @upload_router.put("/transactions/{transaction_id}")
-async def update_transaction(transaction_id: int, request: Request, transaction: TransactionUpdate):
-    user = get_current_user(request)
+async def update_transaction(transaction_id: int, transaction: TransactionUpdate, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -285,8 +234,7 @@ async def update_transaction(transaction_id: int, request: Request, transaction:
         conn.close()
 
 @upload_router.get("/accounts/{account_id}/transactions")
-async def get_account_transactions(account_id: int, request: Request):
-    user = get_current_user(request)
+async def get_account_transactions(account_id: int, user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:

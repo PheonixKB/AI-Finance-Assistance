@@ -1,3 +1,4 @@
+import { Link, useNavigate } from "react-router-dom";
 // interface/src/SideMenu.js
 import React, { useState } from "react";
 import { useTheme } from "@mui/material/styles";
@@ -27,6 +28,8 @@ import {
   Edit,
   MoreVert as MoreVertIcon,
   Delete as DeleteIcon,
+  Person as PersonIcon,
+  UploadFile as UploadFileIcon,
 } from "@mui/icons-material";
 import PermissionToggle from "./PermissionToggle";
 import "./SideMenu.css";
@@ -37,13 +40,14 @@ const SideMenu = ({
   onNewChat,
   onSelectSession,
   sessions = [],
+  activeSession,
   collapsed,
   toggleCollapse,
   onUpdateTitle,
-  activeSession,
   onDeleteSession,
 }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [showPermissions, setShowPermissions] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [newTitle, setNewTitle] = useState("");
@@ -83,6 +87,16 @@ const SideMenu = ({
     handleMenuClose();
   };
 
+  const handleSelectSessionAndNavigate = (sessionId) => {
+    onSelectSession(sessionId);
+    navigate('/');
+  };
+
+  const handleNewChatAndNavigate = () => {
+    onNewChat();
+    navigate('/');
+  };
+
   return (
     <div className="SideMenu-wrapper">
       {/* ===== Header Row ===== */}
@@ -104,7 +118,7 @@ const SideMenu = ({
         {/* New Chat */}
         <List>
           <ListItem disablePadding>
-            <ListItemButton onClick={onNewChat}>
+            <ListItemButton onClick={handleNewChatAndNavigate}>
               <ListItemIcon>
                 <Add />
               </ListItemIcon>
@@ -137,7 +151,7 @@ const SideMenu = ({
                   />
                 ) : (
                   <ListItemButton
-                    onClick={() => onSelectSession(s.id)}
+                    onClick={() => handleSelectSessionAndNavigate(s.id)}
                     selected={s.id === activeSession}
                   >
                     <ListItemIcon>
@@ -206,6 +220,24 @@ const SideMenu = ({
       {/* ===== Footer ===== */}
       <div className="SideMenu-footer">
         <List>
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/upload">
+              <ListItemIcon>
+                <UploadFileIcon />
+              </ListItemIcon>
+              <ListItemText primary="Upload Data" />
+            </ListItemButton>
+          </ListItem>
+
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/profile">
+              <ListItemIcon>
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText primary="Profile" />
+            </ListItemButton>
+          </ListItem>
+
           <ListItem disablePadding>
             <ListItemButton onClick={onToggleDarkMode}>
               <ListItemIcon>

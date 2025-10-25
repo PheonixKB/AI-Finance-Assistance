@@ -19,7 +19,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 
-function FinanceUploadForm({ onSubmitted }) {
+function UploadPage({ onSubmitted }) {
   const [accounts, setAccounts] = useState([]);
   const [investments, setInvestments] = useState([]);
   const [newAccount, setNewAccount] = useState({
@@ -135,7 +135,7 @@ function FinanceUploadForm({ onSubmitted }) {
       alert("Account created successfully!");
       setNewAccount({ account_name: "", bank_name: "", account_number: "", bank_number: "", account_type: "", balance: 0 });
       fetchAccounts(); // Refresh accounts list
-      onSubmitted();
+      onSubmitting();
     } catch (err) {
       setError(err.message || "Failed to create account");
     }
@@ -286,8 +286,6 @@ function FinanceUploadForm({ onSubmitted }) {
       onSubmitted();
     } catch (err) {
       setError(err.message || "Failed to delete investment");
-    } finally {
-      setInvestmentToDelete(null);
     }
   };
 
@@ -367,12 +365,12 @@ function FinanceUploadForm({ onSubmitted }) {
       </Typography>
       <Grid container spacing={2}>
         {accounts.length === 0 ? (
-          <Grid xs={12}>
+          <Grid item xs={12}>
             <Typography>No accounts found. Add a new one below!</Typography>
           </Grid>
         ) : (
           accounts.map((account) => (
-            <Grid xs={12} sm={6} md={4} key={account.id}>
+            <Grid item xs={12} sm={6} md={4} key={account.id}>
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="h6">{account.account_name}</Typography>
@@ -584,12 +582,12 @@ function FinanceUploadForm({ onSubmitted }) {
       </Typography>
       <Grid container spacing={2}>
         {investments.length === 0 ? (
-          <Grid xs={12}>
+          <Grid item xs={12}>
             <Typography>No investments found. Add a new one below!</Typography>
           </Grid>
         ) : (
           investments.map((investment) => (
-            <Grid xs={12} sm={6} md={4} key={investment.id}>
+            <Grid item xs={12} sm={6} md={4} key={investment.id}>
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="h6">{investment.name}</Typography>
@@ -899,4 +897,4 @@ function FinanceUploadForm({ onSubmitted }) {
   );
 }
 
-export default FinanceUploadForm;
+export default UploadPage;

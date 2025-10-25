@@ -4,14 +4,15 @@
   "private": true,
   "proxy": "http://localhost:8000",
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.4",
-    "@mui/material": "^7.3.4",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.14",
+    "@mui/material": "^5.15.14",
     "jwt-decode": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
+    "react-router-dom": "^6.30.1",
     "react-scripts": "^5.0.1"
   },
   "scripts": {
@@ -31,5 +32,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "overrides": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }
