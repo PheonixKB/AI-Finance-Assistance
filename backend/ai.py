@@ -1,11 +1,11 @@
 # backend/ai.py
 import os
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from .users import get_current_user
-from .permissions import get_user_permissions
-from database.db import get_db_connection # Import get_db_connection for direct DB access if needed
+from users import get_current_user
+from permissions import get_user_permissions
+from finance_data import get_db_connection # Import get_db_connection for direct DB access if needed
 
 import bleach
 
@@ -15,7 +15,7 @@ except ImportError:
     OpenAI = None
     APIError = None
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 router = APIRouter()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
@@ -23,8 +23,9 @@ class QueryModel(BaseModel):
     query: str
 
 @router.post("/ask")
-async def ask_finance_assistant(item: QueryModel, user: dict = Depends(get_current_user)):
+async def ask_finance_assistant(item: QueryModel, request: Request):
     query = bleach.clean(item.query.strip())
+    user = get_current_user(request)
     user_id = user["id"]
     permissions = get_user_permissions(user_id)
 
@@ -66,8 +67,11 @@ async def ask_finance_assistant(item: QueryModel, user: dict = Depends(get_curre
         except APIError as e:
             raise HTTPException(status_code=502, detail=f"AI provider error: {str(e)}")
 
-    answer = "I am currently unable to connect to the AI service. Please try again later." 
-    insights = []
+    answer = "[FAKE ANSWER] "
+    answer += f"User summary data: {summary_finance_data}. "
+    answer += f"Data permissions: {permissions}."
+
+    insights = [f"Credit Score: {summary_finance_data.get('credit_score')}", f"EPF Balance: {summary_finance_data.get('epf_balance')}"]
     return {"answer": answer, "insights": insights}
 
 

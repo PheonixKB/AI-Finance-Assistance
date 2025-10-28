@@ -1,3 +1,5 @@
 node_modules
 .env
 my_venv
+.vercel
+.env*.local

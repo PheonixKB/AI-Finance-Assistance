@@ -1,8 +1,8 @@
 # backend/permissions.py
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from database.db import get_db_connection
-from .users import get_current_user
+from db import get_db_connection
+from users import get_current_user
 
 router = APIRouter(prefix="/permissions", tags=["Permissions"])
 
