@@ -9,3 +9,5 @@ python-multipart
 openai
 bcrypt<4.0.0
 bleach
+pandas
+openpyxl

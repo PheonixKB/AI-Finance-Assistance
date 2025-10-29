@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import AIChat from './pages/AIChat'; // Import AIChat component for the AI chat page
 import Profile from './pages/Profile'; // Import Profile component for the user profile page
 import FinanceData from './pages/FinanceData'; // Import FinanceData component for the finance data page
+import FinanceQuestionnaire from './pages/FinanceQuestionnaire'; // Import FinanceQuestionnaire component
 // Import authentication guard component
 import AuthGuard from './components/AuthGuard';
 
@@ -23,6 +24,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/chat" element={<AIChat />} />
+        <Route path="/finance-questionnaire" element={<FinanceQuestionnaire />} />
         
         {/* Protected routes requiring authentication */}
         {/* The Dashboard route is protected by AuthGuard */}
@@ -31,15 +34,6 @@ function App() {
           element={
             <AuthGuard> {/* AuthGuard checks for authentication before rendering Dashboard */}
               <Dashboard />
-            </AuthGuard>
-          }
-        />
-        {/* The AI Chat route is protected by AuthGuard */}
-        <Route
-          path="/chat"
-          element={
-            <AuthGuard> {/* AuthGuard checks for authentication before rendering AIChat */}
-              <AIChat />
             </AuthGuard>
           }
         />

@@ -16,8 +16,34 @@ const Profile = () => {
     epf: false,
     creditScore: false,
   });
+  const [financeProfile, setFinanceProfile] = useState({
+    salary: '',
+    monthly_debt_payments: '',
+    housing_cost: '',
+    transportation_cost: '',
+    food_cost: '',
+    other_expenses: '',
+    savings_goal: '',
+    risk_tolerance: '',
+    investment_experience: '',
+  });
+  const [isEditingFinanceProfile, setIsEditingFinanceProfile] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' }); // For success/error messages
   const navigate = useNavigate();
+
+  const fetchFinanceProfile = async (token) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/finance_profile', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch finance profile');
+      const data = await response.json();
+      setFinanceProfile(data);
+    } catch (error) {
+      console.error("Error fetching finance profile:", error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -27,6 +53,7 @@ const Profile = () => {
         setUsername(decodedToken.username || 'User');
         setEmail(decodedToken.sub || ''); // 'sub' typically holds the email
         setEditedUsername(decodedToken.username || 'User');
+        fetchFinanceProfile(token); // Fetch finance profile data
         // TODO: Fetch actual permissions from backend
         setPermissions({
           assets: true,
@@ -86,6 +113,44 @@ const Profile = () => {
       setIsEditingUsername(false);
     } catch (error) {
       console.error("Error updating username:", error); // Log caught JavaScript errors
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const handleFinanceProfileChange = (e) => {
+    const { name, value } = e.target;
+    setFinanceProfile((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleUpdateFinanceProfile = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/signin');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/api/finance_profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(financeProfile),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update financial profile');
+      }
+
+      setMessage({ type: 'success', text: 'Financial profile updated successfully!' });
+      setIsEditingFinanceProfile(false);
+    } catch (error) {
+      console.error("Error updating financial profile:", error);
       setMessage({ type: 'error', text: error.message });
     }
   };
@@ -157,6 +222,193 @@ const Profile = () => {
             )}
           </div>
           <span className="text-gray-300 text-lg">{email}</span>
+        </div>
+
+        {/* Financial Profile */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-white">Financial Profile</h3>
+          <div className="bg-white/10 p-4 rounded-lg">
+            {isEditingFinanceProfile ? (
+              <form onSubmit={(e) => { e.preventDefault(); handleUpdateFinanceProfile(); }} className="space-y-3">
+                {/* Salary */}
+                <div>
+                  <label htmlFor="salary" className="text-white text-sm">Annual Salary</label>
+                  <input
+                    id="salary"
+                    name="salary"
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.salary || ''}
+                    onChange={handleFinanceProfileChange}
+                  />
+                </div>
+                {/* Monthly Debt Payments */}
+                <div>
+                  <label htmlFor="monthly_debt_payments" className="text-white text-sm">Monthly Debt Payments</label>
+                  <input
+                    id="monthly_debt_payments"
+                    name="monthly_debt_payments"
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.monthly_debt_payments || ''}
+                    onChange={handleFinanceProfileChange}
+                  />
+                </div>
+                {/* Housing Cost */}
+                <div>
+                  <label htmlFor="housing_cost" className="text-white text-sm">Monthly Housing Cost</label>
+                  <input
+                    id="housing_cost"
+                    name="housing_cost"
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.housing_cost || ''}
+                    onChange={handleFinanceProfileChange}
+                  />
+                </div>
+                {/* Transportation Cost */}
+                <div>
+                  <label htmlFor="transportation_cost" className="text-white text-sm">Monthly Transportation Cost</label>
+                  <input
+                    id="transportation_cost"
+                    name="transportation_cost"
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.transportation_cost || ''}
+                    onChange={handleFinanceProfileChange}
+                  />
+                </div>
+                {/* Food Cost */}
+                <div>
+                  <label htmlFor="food_cost" className="text-white text-sm">Monthly Food Cost</label>
+                  <input
+                    id="food_cost"
+                    name="food_cost"
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.food_cost || ''}
+                    onChange={handleFinanceProfileChange}
+                  />
+                </div>
+                {/* Other Expenses */}
+                <div>
+                  <label htmlFor="other_expenses" className="text-white text-sm">Other Monthly Expenses</label>
+                  <input
+                    id="other_expenses"
+                    name="other_expenses"
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.other_expenses || ''}
+                    onChange={handleFinanceProfileChange}
+                  />
+                </div>
+                {/* Savings Goal */}
+                <div>
+                  <label htmlFor="savings_goal" className="text-white text-sm">Savings Goal</label>
+                  <input
+                    id="savings_goal"
+                    name="savings_goal"
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.savings_goal || ''}
+                    onChange={handleFinanceProfileChange}
+                  />
+                </div>
+                {/* Risk Tolerance */}
+                <div>
+                  <label htmlFor="risk_tolerance" className="text-white text-sm">Risk Tolerance</label>
+                  <select
+                    id="risk_tolerance"
+                    name="risk_tolerance"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.risk_tolerance || ''}
+                    onChange={handleFinanceProfileChange}
+                  >
+                    <option value="">Select Risk Tolerance</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                {/* Investment Experience */}
+                <div>
+                  <label htmlFor="investment_experience" className="text-white text-sm">Investment Experience</label>
+                  <select
+                    id="investment_experience"
+                    name="investment_experience"
+                    className="w-full bg-white/20 text-white rounded-md px-2 py-1 mt-1"
+                    value={financeProfile.investment_experience || ''}
+                    onChange={handleFinanceProfileChange}
+                  >
+                    <option value="">Select Investment Experience</option>
+                    <option value="none">None</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="expert">Expert</option>
+                  </select>
+                </div>
+                <div className="flex justify-end space-x-2 mt-4">
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Save
+                  </button>
+                  <button type="button" onClick={() => setIsEditingFinanceProfile(false)} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Annual Salary:</span>
+                  <span className="text-white font-semibold">{financeProfile.salary ? `$${financeProfile.salary.toLocaleString()}` : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Monthly Debt Payments:</span>
+                  <span className="text-white font-semibold">{financeProfile.monthly_debt_payments ? `$${financeProfile.monthly_debt_payments.toLocaleString()}` : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Monthly Housing Cost:</span>
+                  <span className="text-white font-semibold">{financeProfile.housing_cost ? `$${financeProfile.housing_cost.toLocaleString()}` : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Monthly Transportation Cost:</span>
+                  <span className="text-white font-semibold">{financeProfile.transportation_cost ? `$${financeProfile.transportation_cost.toLocaleString()}` : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Monthly Food Cost:</span>
+                  <span className="text-white font-semibold">{financeProfile.food_cost ? `$${financeProfile.food_cost.toLocaleString()}` : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Other Monthly Expenses:</span>
+                  <span className="text-white font-semibold">{financeProfile.other_expenses ? `$${financeProfile.other_expenses.toLocaleString()}` : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Savings Goal:</span>
+                  <span className="text-white font-semibold">{financeProfile.savings_goal ? `$${financeProfile.savings_goal.toLocaleString()}` : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Risk Tolerance:</span>
+                  <span className="text-white font-semibold capitalize">{financeProfile.risk_tolerance || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Investment Experience:</span>
+                  <span className="text-white font-semibold capitalize">{financeProfile.investment_experience || 'N/A'}</span>
+                </div>
+                <div className="text-right mt-4">
+                  <button onClick={() => setIsEditingFinanceProfile(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Edit Financial Profile
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-4">

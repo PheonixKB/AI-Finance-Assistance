@@ -1,42 +1,172 @@
-import React from 'react';
-import { ArrowRight, Sparkles, Shield, Zap } from 'lucide-react'; // Importing icons for visual elements
-import { useNavigate } from 'react-router-dom'; // Hook for programmatic navigation
+import React, { useEffect, useState } from "react";
+import { ArrowRight, Sparkles, Shield, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { jwtDecode } from 'jwt-decode';
 
-/**
- * Hero component represents the main introductory section of the landing page.
- * It features a compelling headline, a brief description, call-to-action buttons,
- * and highlights key benefits with illustrative graphics.
- */
 const Hero = () => {
-  const navigate = useNavigate(); // Initialize navigate hook
+  const navigate = useNavigate();
+  const [data, setData] = useState({
+    monthly_spending: 0,
+    spending_chart: [],
+    savings_current: 0,
+    savings_goal: 0,
+    ai_optimization: 0,
+  });
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        // No need to set username here, as it's not displayed in Hero
+
+        const fetchFinanceData = async () => {
+          let monthlySpending = 0;
+          let spendingChartData = [];
+          let savingsGoal = 0;
+          let totalSavings = 0;
+
+          // Fetch finance profile for savings goal
+          try {
+            const response = await fetch('http://localhost:8000/api/finance_profile', {
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (response.ok) {
+              const profileData = await response.json();
+              savingsGoal = profileData.savings_goal || 0;
+            }
+          } catch (error) {
+            console.error("Error fetching finance profile:", error);
+          }
+
+          // Fetch all transactions
+          try {
+            const response = await fetch('http://localhost:8000/api/transactions', {
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (response.ok) {
+              const transactions = await response.json();
+              const { processedMonthlySpending, processedSpendingChartData, processedTotalSavings } = processTransactions(transactions);
+              monthlySpending = processedMonthlySpending;
+              spendingChartData = processedSpendingChartData;
+              totalSavings = processedTotalSavings;
+            } else {
+              console.error("Failed to fetch transactions");
+            }
+          } catch (error) {
+            console.error("Error fetching transactions:", error);
+          }
+
+          setData({
+            monthly_spending: monthlySpending,
+            spending_chart: spendingChartData,
+            savings_current: totalSavings,
+            savings_goal: savingsGoal,
+            ai_optimization: 12, // Placeholder for now
+          });
+        };
+
+        fetchFinanceData();
+
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        localStorage.removeItem('token');
+        navigate('/signin');
+      }
+    } else {
+      // If no token, set default data or redirect to signin
+      // For now, we'll just set default values
+      setData({
+        monthly_spending: 3247,
+        spending_chart: [60, 80, 45, 90],
+        savings_current: 2100,
+        savings_goal: 5000,
+        ai_optimization: 12,
+      });
+    }
+  }, [navigate]);
+
+  const processTransactions = (transactions) => {
+    const monthlySpendingMap = {};
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Initialize monthly spending for the last 4 months
+    for (let i = 0; i < 4; i++) {
+      let month = currentMonth - i;
+      let year = currentYear;
+      if (month < 0) {
+        month += 12;
+        year -= 1;
+      }
+      const monthKey = `${year}-${month + 1}`;
+      monthlySpendingMap[monthKey] = 0;
+    }
+
+    let totalCurrentMonthSpending = 0;
+    let calculatedTotalSavings = 0;
+
+    transactions.forEach(tx => {
+      const txDate = new Date(tx.date);
+      const txMonth = txDate.getMonth();
+      const txYear = txDate.getFullYear();
+      const monthKey = `${txYear}-${txMonth + 1}`;
+
+      // Only consider transactions from the last 4 months
+      if (monthlySpendingMap.hasOwnProperty(monthKey)) {
+        monthlySpendingMap[monthKey] += tx.amount;
+      }
+
+      // Calculate total spending for the current month
+      if (txMonth === currentMonth && txYear === currentYear) {
+        totalCurrentMonthSpending += tx.amount;
+      }
+      // Assuming positive amounts are income/savings and negative are expenses
+      calculatedTotalSavings += tx.amount; // This needs more sophisticated logic for actual savings
+    });
+
+    const spendingValues = Object.values(monthlySpendingMap);
+    const maxSpending = Math.max(...spendingValues, 1); // Avoid division by zero
+
+    const chartData = spendingValues.map(spending => (spending / maxSpending) * 100);
+
+    return {
+      processedMonthlySpending: totalCurrentMonthSpending,
+      processedSpendingChartData: chartData,
+      processedTotalSavings: calculatedTotalSavings,
+    };
+  };
+
+  if (!data) {
+    return <p className="text-white">Loading...</p>;
+  }
 
   return (
-    // Main section with padding and a gradient background
     <section className="pt-24 pb-12 md:pt-32 md:pb-20 gradient-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left column: Text content and call-to-action buttons */}
-          <div className="animate-fade-in"> {/* Apply fade-in animation */}
-            {/* AI-Powered Financial Intelligence highlight */}
+          <div className="animate-fade-in">
             <div className="flex items-center space-x-2 mb-6">
               <Sparkles className="w-5 h-5 text-yellow-300" />
-              <span className="text-yellow-300 font-semibold">AI-Powered Financial Intelligence</span>
+              <span className="text-yellow-300 font-semibold">
+                AI-Powered Financial Intelligence
+              </span>
             </div>
-            
-            {/* Main headline */}
+
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
               Your Personal
               <span className="text-yellow-300"> AI Finance</span>
               <br />
               Assistant
             </h1>
-            
-            {/* Description paragraph */}
+
             <p className="text-xl text-gray-200 mb-8 leading-relaxed">
-              Make smarter financial decisions with AI-powered insights. Track expenses, optimize budgets, and get personalized investment recommendations.
+              Make smarter financial decisions with AI-powered insights. Track
+              expenses, optimize budgets, and get personalized investment
+              recommendations.
             </p>
-            
-            {/* Call-to-action buttons */}
+
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <a
                 href="/chat"
@@ -56,8 +186,7 @@ const Hero = () => {
                 Watch Demo
               </a>
             </div>
-            
-            {/* Key features/benefits */}
+
             <div className="flex items-center space-x-6 text-gray-300">
               <div className="flex items-center space-x-2">
                 <Shield className="w-5 h-5 text-green-400" />
@@ -69,34 +198,42 @@ const Hero = () => {
               </div>
             </div>
           </div>
-          
-          {/* Right column: Illustrative graphic/dashboard preview */}
-          <div className="relative animate-float"> {/* Apply floating animation */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20"> {/* Glass effect card */}
+
+          <div className="relative animate-float">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20">
               <div className="space-y-6">
-                {/* Monthly Spending display */}
                 <div className="flex items-center justify-between">
                   <span className="text-white/80">Monthly Spending</span>
-                  <span className="text-white font-semibold">$3,247</span>
+                  <span className="text-white font-semibold">
+                    ${data.monthly_spending.toLocaleString()}
+                  </span>
                 </div>
-                {/* Spending chart placeholder */}
+
                 <div className="h-32 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg flex items-end p-4">
                   <div className="w-full flex items-end justify-between">
-                    <div className="w-8 bg-white/80 rounded-t" style={{height: '60%'}}></div>
-                    <div className="w-8 bg-white/80 rounded-t" style={{height: '80%'}}></div>
-                    <div className="w-8 bg-white/80 rounded-t" style={{height: '45%'}}></div>
-                    <div className="w-8 bg-white/80 rounded-t" style={{height: '90%'}}></div>
+                    {(data.spending_chart || [50, 70, 40, 85]).map((height, i) => (
+                      <div
+                        key={i}
+                        className="w-8 bg-white/80 rounded-t"
+                        style={{ height: `${height}%` }}
+                      ></div>
+                    ))}
                   </div>
                 </div>
-                {/* Savings Goal and AI Insights */}
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="bg-white/10 rounded-lg p-3">
                     <p className="text-white/70">Savings Goal</p>
-                    <p className="text-white font-semibold">$2,100 / $5,000</p>
+                    <p className="text-white font-semibold">
+                      ${data.savings_current.toLocaleString()} / $
+                      {data.savings_goal.toLocaleString()}
+                    </p>
                   </div>
                   <div className="bg-white/10 rounded-lg p-3">
                     <p className="text-white/70">AI Insights</p>
-                    <p className="text-green-400 font-semibold">+12% Optimized</p>
+                    <p className="text-green-400 font-semibold">
+                      +{data.ai_optimization}% Optimized
+                    </p>
                   </div>
                 </div>
               </div>

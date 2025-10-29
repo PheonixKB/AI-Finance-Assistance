@@ -44,8 +44,11 @@ const SignUp = () => {
         throw new Error(errorData.detail || 'Registration failed'); // Throw error with message from backend or default
       }
 
-      // Redirect to the sign-in page after successful registration
-      navigate('/signin');
+      const data = await response.json();
+      localStorage.setItem('token', data.access_token); // Store the JWT token
+
+      // Redirect to the finance questionnaire page after successful registration
+      navigate('/finance-questionnaire');
     } catch (err) {
       setError(err.message); // Display any caught errors
     }

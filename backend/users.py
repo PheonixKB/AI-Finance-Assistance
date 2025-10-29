@@ -43,11 +43,11 @@ class UserUpdate(BaseModel):
 def get_current_user(request: Request):
     auth_header = request.headers.get("Authorization")
     if not auth_header:
-        raise HTTPException(status_code=401, detail="Missing token")
+        return None
 
     scheme, _, token = auth_header.partition(" ")
     if scheme.lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid auth scheme")
+        return None
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -62,15 +62,12 @@ def get_current_user(request: Request):
         conn.close()
         
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            return None
         return user
-    except JWTError: # Catch JWT specific errors
-        raise HTTPException(status_code=401, detail="Invalid token")
-    except Exception: # Catch any other unexpected errors
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-        cursor.close()
-        conn.close()
+    except JWTError:
+        return None
+    except Exception:
+        return None
 
 # API endpoint to update the current user's information
 @router.put("/me")
@@ -93,6 +90,21 @@ async def update_user_me(user_update: UserUpdate, current_user: dict = Depends(g
 
         # Return the updated user information and the new token
         return {"message": "Username updated successfully", "username": user_update.username, "access_token": new_token, "token_type": "bearer"}
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.delete("/me")
+async def delete_user_me(current_user: dict = Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required to delete account.")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM users WHERE id = %s", (current_user["id"],))
+        conn.commit()
+        return {"message": "Account deleted successfully."}
     finally:
         cursor.close()
         conn.close()
@@ -147,7 +159,10 @@ async def register(user: UserCreate):
         # Send welcome email asynchronously
         await send_welcome_email(user.email, user.username)
 
-        return {"message": "registered", "email": user.email, "username": user.username}
+        # Encode JWT token with user's email and username
+        token = jwt.encode({"sub": user.email, "username": user.username}, SECRET_KEY, algorithm=ALGORITHM)
+
+        return {"message": "registered", "email": user.email, "username": user.username, "access_token": token, "token_type": "bearer"}
     finally:
         cursor.close()
         conn.close()

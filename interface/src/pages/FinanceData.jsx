@@ -15,15 +15,7 @@ const FinanceData = () => {
 
   // Investments States
   const [investments, setInvestments] = useState([]);
-  const [newInvestment, setNewInvestment] = useState({
-    investment_type: '',
-    name: '',
-    quantity: '',
-    purchase_price: '',
-    current_price: '',
-    purchase_date: '',
-  });
-  const [editingInvestmentId, setEditingInvestmentId] = useState(null);
+  const [selectedInvestmentFile, setSelectedInvestmentFile] = useState(null);
 
   // Accounts States
   const [accounts, setAccounts] = useState([]);
@@ -37,34 +29,8 @@ const FinanceData = () => {
   });
   const [editingAccountId, setEditingAccountId] = useState(null);
 
-  // Transactions States
   const [transactions, setTransactions] = useState([]);
-  const [newTransaction, setNewTransaction] = useState({
-    account_id: '',
-    date: '',
-    descr: '',
-    amount: '',
-  });
-  const [editingTransactionId, setEditingTransactionId] = useState(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        setUsername(decodedToken.username || 'User');
-        fetchSummaryFinance(token);
-        fetchInvestments(token);
-        fetchAccounts(token);
-      } catch (error) {
-        console.error("Error decoding token:", error);
-        localStorage.removeItem('token');
-        navigate('/signin');
-      }
-    } else {
-      navigate('/signin');
-    }
-  }, [navigate]);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // --- API Calls ---
   const fetchSummaryFinance = async (token) => {
@@ -117,65 +83,41 @@ const FinanceData = () => {
     }
   };
 
-  const createInvestment = async () => {
+  const handleInvestmentFileChange = (event) => {
+    setSelectedInvestmentFile(event.target.files[0]);
+  };
+
+  const handleInvestmentUpload = async () => {
+    if (!selectedInvestmentFile) {
+      setMessage({ type: 'error', text: 'Please select a file to upload.' });
+      return;
+    }
+
     const token = localStorage.getItem('token');
     if (!token) return;
+
+    const formData = new FormData();
+    formData.append('file', selectedInvestmentFile);
+
     try {
-      const response = await fetch('http://localhost:8000/api/investments', {
+      const response = await fetch('http://localhost:8000/api/upload/investments', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(newInvestment),
+        body: formData,
       });
-      if (!response.ok) throw new Error('Failed to create investment');
-      setMessage({ type: 'success', text: 'Investment created!' });
-      setNewInvestment({ investment_type: '', name: '', quantity: '', purchase_price: '', current_price: '', purchase_date: '' });
-      fetchInvestments(token);
-    } catch (error) {
-      console.error("Error creating investment:", error);
-      setMessage({ type: 'error', text: error.message });
-    }
-  };
 
-  const updateInvestment = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      const investmentToUpdate = investments.find(inv => inv.id === id);
-      const response = await fetch(`http://localhost:8000/api/investments/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(investmentToUpdate),
-      });
-      if (!response.ok) throw new Error('Failed to update investment');
-      setMessage({ type: 'success', text: 'Investment updated!' });
-      setEditingInvestmentId(null);
-      fetchInvestments(token);
-    } catch (error) {
-      console.error("Error updating investment:", error);
-      setMessage({ type: 'error', text: error.message });
-    }
-  };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to upload investments');
+      }
 
-  const deleteInvestment = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    if (!window.confirm("Are you sure you want to delete this investment?")) return;
-    try {
-      const response = await fetch(`http://localhost:8000/api/investments/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to delete investment');
-      setMessage({ type: 'success', text: 'Investment deleted!' });
-      fetchInvestments(token);
+      setMessage({ type: 'success', text: 'Investments uploaded successfully!' });
+      setSelectedInvestmentFile(null); // Clear selected file
+      fetchInvestments(token); // Re-fetch investments to update the list
     } catch (error) {
-      console.error("Error deleting investment:", error);
+      console.error("Error uploading investments:", error);
       setMessage({ type: 'error', text: error.message });
     }
   };
@@ -271,51 +213,6 @@ const FinanceData = () => {
     }
   };
 
-  const createTransaction = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      const response = await fetch('http://localhost:8000/api/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(newTransaction),
-      });
-      if (!response.ok) throw new Error('Failed to create transaction');
-      setMessage({ type: 'success', text: 'Transaction created!' });
-      setNewTransaction({ account_id: '', date: '', descr: '', amount: '' });
-      fetchTransactions(newTransaction.account_id, token);
-    } catch (error) {
-      console.error("Error creating transaction:", error);
-      setMessage({ type: 'error', text: error.message });
-    }
-  };
-
-  const updateTransaction = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      const transactionToUpdate = transactions.find(tx => tx.id === id);
-      const response = await fetch(`http://localhost:8000/api/transactions/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(transactionToUpdate),
-      });
-      if (!response.ok) throw new Error('Failed to update transaction');
-      setMessage({ type: 'success', text: 'Transaction updated!' });
-      setEditingTransactionId(null);
-      fetchTransactions(transactionToUpdate.account_id, token);
-    } catch (error) {
-      console.error("Error updating transaction:", error);
-      setMessage({ type: 'error', text: error.message });
-    }
-  };
-
   const deleteTransaction = async (id, accountId) => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -333,6 +230,66 @@ const FinanceData = () => {
       setMessage({ type: 'error', text: error.message });
     }
   };
+
+  const handleFileChange = (event) => {
+    setSelectedFile(event.target.files[0]);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setMessage({ type: 'error', text: 'Please select a file to upload.' });
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/upload/transactions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to upload transactions');
+      }
+
+      setMessage({ type: 'success', text: 'Transactions uploaded successfully!' });
+      setSelectedFile(null); // Clear selected file
+      // Optionally re-fetch transactions to update the list
+      // fetchTransactions(selectedAccountId, token);
+    } catch (error) {
+      console.error("Error uploading transactions:", error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        setUsername(decodedToken.username || 'User');
+        fetchSummaryFinance(token);
+        fetchInvestments(token);
+        fetchAccounts(token);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        localStorage.removeItem('token');
+        navigate('/signin');
+      }
+    }
+   else {
+      navigate('/signin');
+    }
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12 px-4 sm:px-6 lg:px-8">
@@ -417,34 +374,23 @@ const FinanceData = () => {
                 <p className="text-gray-300 text-sm">Quantity: {inv.quantity}, Purchase: {inv.purchase_price}, Current: {inv.current_price || 'N/A'}</p>
               </div>
               <div>
-                <button onClick={() => setEditingInvestmentId(inv.id)} className="text-blue-400 hover:text-blue-300 mr-2"><Edit className="w-4 h-4" /></button>
                 <button onClick={() => deleteInvestment(inv.id)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))}
-          {editingInvestmentId && (
-            <div className="bg-white/10 p-4 rounded-lg mt-4">
-              {/* Edit Investment Form */}
-              <h4 className="text-white font-semibold mb-2">Edit Investment</h4>
-              <input type="text" placeholder="Type" value={investments.find(inv => inv.id === editingInvestmentId)?.investment_type || ''} onChange={(e) => setInvestments(investments.map(inv => inv.id === editingInvestmentId ? { ...inv, investment_type: e.target.value } : inv))} className="w-full bg-white/20 text-white rounded-md px-2 py-1 mb-2" />
-              <input type="text" placeholder="Name" value={investments.find(inv => inv.id === editingInvestmentId)?.name || ''} onChange={(e) => setInvestments(investments.map(inv => inv.id === editingInvestmentId ? { ...inv, name: e.target.value } : inv))} className="w-full bg-white/20 text-white rounded-md px-2 py-1 mb-2" />
-              <input type="number" placeholder="Quantity" value={investments.find(inv => inv.id === editingInvestmentId)?.quantity || ''} onChange={(e) => setInvestments(investments.map(inv => inv.id === editingInvestmentId ? { ...inv, quantity: parseFloat(e.target.value) } : inv))} className="w-full bg-white/20 text-white rounded-md px-2 py-1 mb-2" />
-              <input type="number" placeholder="Purchase Price" value={investments.find(inv => inv.id === editingInvestmentId)?.purchase_price || ''} onChange={(e) => setInvestments(investments.map(inv => inv.id === editingInvestmentId ? { ...inv, purchase_price: parseFloat(e.target.value) } : inv))} className="w-full bg-white/20 text-white rounded-md px-2 py-1 mb-2" />
-              <input type="number" placeholder="Current Price" value={investments.find(inv => inv.id === editingInvestmentId)?.current_price || ''} onChange={(e) => setInvestments(investments.map(inv => inv.id === editingInvestmentId ? { ...inv, current_price: parseFloat(e.target.value) } : inv))} className="w-full bg-white/20 text-white rounded-md px-2 py-1 mb-2" />
-              <input type="date" placeholder="Purchase Date" value={investments.find(inv => inv.id === editingInvestmentId)?.purchase_date || ''} onChange={(e) => setInvestments(investments.map(inv => inv.id === editingInvestmentId ? { ...inv, purchase_date: e.target.value } : inv))} className="w-full bg-white/20 text-white rounded-md px-2 py-1 mb-2" />
-              <button onClick={() => updateInvestment(editingInvestmentId)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2">Save</button>
-              <button onClick={() => setEditingInvestmentId(null)} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Cancel</button>
-            </div>
-          )}
-          <div className="bg-white/10 p-4 rounded-lg">
-            <h4 className="text-white font-semibold mb-2">Add New Investment</h4>
-            <input type="text" placeholder="Type" value={newInvestment.investment_type} onChange={(e) => setNewInvestment({ ...newInvestment, investment_type: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="text" placeholder="Name" value={newInvestment.name} onChange={(e) => setNewInvestment({ ...newInvestment, name: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="number" placeholder="Quantity" value={newInvestment.quantity} onChange={(e) => setNewInvestment({ ...newInvestment, quantity: parseFloat(e.target.value) })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="number" placeholder="Purchase Price" value={newInvestment.purchase_price} onChange={(e) => setNewInvestment({ ...newInvestment, purchase_price: parseFloat(e.target.value) })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="number" placeholder="Current Price" value={newInvestment.current_price} onChange={(e) => setNewInvestment({ ...newInvestment, current_price: parseFloat(e.target.value) })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="date" placeholder="Purchase Date" value={newInvestment.purchase_date} onChange={(e) => setNewInvestment({ ...newInvestment, purchase_date: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <button onClick={createInvestment} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Investment</button>
+
+          {/* File Upload Section for Investments */}
+          <div className="bg-white/10 p-4 rounded-lg mt-4">
+            <h4 className="text-white font-semibold mb-2">Upload Investments (Excel/PDF)</h4>
+            <input
+              type="file"
+              accept=".xlsx, .xls, .pdf"
+              onChange={handleInvestmentFileChange}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            <button onClick={handleInvestmentUpload} className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              Upload Investments
+            </button>
           </div>
         </div>
 
@@ -516,35 +462,27 @@ const FinanceData = () => {
                     <p className="text-gray-300 text-sm">Amount: {tx.amount}</p>
                   </div>
                   <div>
-                    <button onClick={() => setEditingTransactionId(tx.id)} className="text-blue-400 hover:text-blue-300 mr-2"><Edit className="w-4 h-4" /></button>
                     <button onClick={() => deleteTransaction(tx.id, tx.account_id)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
 
-              {editingTransactionId && (
-                <div className="bg-white/10 p-4 rounded-lg mt-4">
-                  {/* Edit Transaction Form */}
-                  <h4 className="text-white font-semibold mb-2">Edit Transaction</h4>
-                  <input type="date" value={transactions.find(tx => tx.id === editingTransactionId)?.date || ''} onChange={(e) => setTransactions(transactions.map(tx => tx.id === editingTransactionId ? { ...tx, date: e.target.value } : tx))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <input type="text" placeholder="Description" value={transactions.find(tx => tx.id === editingTransactionId)?.descr || ''} onChange={(e) => setTransactions(transactions.map(tx => tx.id === editingTransactionId ? { ...tx, descr: e.target.value } : tx))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <input type="number" placeholder="Amount" value={transactions.find(tx => tx.id === editingTransactionId)?.amount || ''} onChange={(e) => setTransactions(transactions.map(tx => tx.id === editingTransactionId ? { ...tx, amount: parseFloat(e.target.value) } : tx))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <button onClick={() => updateTransaction(editingTransactionId)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2">Save</button>
-                  <button onClick={() => setEditingTransactionId(null)} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Cancel</button>
-                </div>
-              )}
-
+              {/* File Upload Section */}
               <div className="bg-white/10 p-4 rounded-lg mt-4">
-                <h4 className="text-white font-semibold mb-2">Add New Transaction</h4>
-                <input type="hidden" value={newTransaction.account_id = accounts[0]?.id} /> {/* Pre-select first account */}
-                <input type="date" value={newTransaction.date} onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <input type="text" placeholder="Description" value={newTransaction.descr} onChange={(e) => setNewTransaction({ ...newTransaction, descr: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <input type="number" placeholder="Amount" value={newTransaction.amount} onChange={(e) => setNewTransaction({ ...newTransaction, amount: parseFloat(e.target.value) })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <button onClick={createTransaction} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Transaction</button>
+                <h4 className="text-white font-semibold mb-2">Upload Transactions (Excel/PDF)</h4>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .pdf"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <button onClick={handleUpload} className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  Upload Transactions
+                </button>
               </div>
             </div>
           ) : (
-            <div className="text-gray-400 text-sm">No accounts available to add transactions.</div>
+            <div className="text-gray-400 text-sm">No accounts available to manage transactions.</div>
           )}
         </div>
       </div>
