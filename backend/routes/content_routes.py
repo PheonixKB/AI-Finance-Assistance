@@ -361,28 +361,60 @@ async def update_transaction(transaction_id: int, request: Request, transaction:
     user = get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required to update transaction.")
+    
     conn = get_db_connection()
     cursor = conn.cursor()
+
     try:
-        # Check if transaction belongs to user
+        # Verify transaction belongs to current user
         cursor.execute("SELECT id FROM user_transactions WHERE id = %s AND user_id = %s", (transaction_id, user["id"]))
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Transaction not found or not authorized")
 
-        updates = {k: v for k, v in transaction.dict(exclude_unset=True).items() if v is not None}
-        if not updates:
-            return {"message": "No fields to update"}
+        # Convert TransactionUpdate (Pydantic) → dict
+        raw_data = transaction.dict(exclude_unset=True)
 
-        set_clauses = ", ".join([f"{k} = %s" for k in updates.keys()])
-        values = list(updates.values())
-        values.append(transaction_id)
+        # Normalize and auto-map possible bank column names to internal schema
+        field_map = {
+            "date": ["date", "Date", "Transaction Date", "Txn Date"],
+            "description": ["description", "Description", "Merchant", "Narration", "Particulars", "Details"],
+            "amount": ["amount", "Amount ($)", "Credit ($)", "Debit ($)", "Cr Amount", "Dr Amount", "Deposit", "Withdrawal"],
+            "card_number": ["card_number", "Card Number", "Account No", "Account Number"]
+        }
+
+        normalized = {}
+        for key, synonyms in field_map.items():
+            for alt in synonyms:
+                if alt in raw_data and raw_data[alt] is not None:
+                    normalized[key] = raw_data[alt]
+                    break  # stop at first match
+
+        # Compute amount if debit/credit pattern is detected
+        debit = raw_data.get("Debit ($)") or raw_data.get("Dr Amount") or raw_data.get("Withdrawal")
+        credit = raw_data.get("Credit ($)") or raw_data.get("Cr Amount") or raw_data.get("Deposit")
+        if debit or credit:
+            normalized["amount"] = float(credit or 0) - float(debit or 0)
+
+        # If nothing valid was found, bail early
+        if not normalized:
+            raise HTTPException(status_code=400, detail="No valid transaction fields detected for update.")
+
+        # Prepare dynamic SQL SET clause
+        set_clauses = ", ".join([f"{k} = %s" for k in normalized.keys()])
+        values = list(normalized.values()) + [transaction_id]
 
         cursor.execute(f"UPDATE user_transactions SET {set_clauses} WHERE id = %s", tuple(values))
         conn.commit()
-        return {"status": "ok", "message": "Transaction updated"}
+
+        return {"status": "ok", "message": "Transaction updated successfully", "updated_fields": list(normalized.keys())}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Update failed: {str(e)}")
+
     finally:
         cursor.close()
         conn.close()
+
 
 @router.get("/accounts/{account_id}/transactions")
 async def get_account_transactions(account_id: int, request: Request):

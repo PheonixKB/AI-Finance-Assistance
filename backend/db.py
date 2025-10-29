@@ -4,8 +4,7 @@ from mysql.connector import pooling # Import MySQL connection pooling module
 import os # Import os module for environment variables
 from dotenv import load_dotenv # Import load_dotenv to load environment variables from .env file
 
-load_dotenv() # Load environment variables from a .env file
-
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env")) # Load environment variables from a .env file
 # MySQL database connection configuration dictionary
 dbconfig = {
     "host": os.getenv("DB_HOST", "localhost"), # Database host, defaults to 'localhost'

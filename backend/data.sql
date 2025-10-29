@@ -1,11 +1,10 @@
--- SQL script to initialize the Finance Assistant Database and its tables.
+-- backend/data.sql
+-- SQL script to initialize the Finance Assistant Database and tables.
 
--- Create the database if it doesn't already exist
 CREATE DATABASE IF NOT EXISTS finance_assistant;
--- Use the newly created or existing database
 USE finance_assistant;
 
--- Table to store user information
+-- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -16,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table to store chat sessions for each user
+-- Chat Sessions
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -25,7 +24,7 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Table to store individual messages within chat sessions
+-- Chat Messages
 CREATE TABLE IF NOT EXISTS chat_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
@@ -35,7 +34,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
 );
 
--- Table to store summarized financial data for each user
+-- Summarized Financial Data
 CREATE TABLE IF NOT EXISTS user_summary (
     user_id INT PRIMARY KEY,
     epf_balance INT,
@@ -43,7 +42,7 @@ CREATE TABLE IF NOT EXISTS user_summary (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Table to store user investment details
+-- Investments
 CREATE TABLE IF NOT EXISTS user_investments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -56,7 +55,7 @@ CREATE TABLE IF NOT EXISTS user_investments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Table to store user bank accounts
+-- Bank Accounts
 CREATE TABLE IF NOT EXISTS user_accounts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -70,19 +69,19 @@ CREATE TABLE IF NOT EXISTS user_accounts (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Table to store user transaction details
+-- Transactions (supports bank statement uploads)
 CREATE TABLE IF NOT EXISTS user_transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     account_id INT NOT NULL,
     date DATE,
-    descr VARCHAR(255),
-    amount INT,
+    descr VARCHAR(255),             -- Merchant/Description field
+    amount DECIMAL(15,2),           -- Use DECIMAL for rupees/paise accuracy
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (account_id) REFERENCES user_accounts(id) ON DELETE CASCADE
 );
 
--- Table to store user permissions
+-- Permissions
 CREATE TABLE IF NOT EXISTS user_permissions (
     user_id INT PRIMARY KEY,
     assets BOOLEAN DEFAULT TRUE,
@@ -94,7 +93,7 @@ CREATE TABLE IF NOT EXISTS user_permissions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Table to store detailed financial profile for each user
+-- Detailed Profile
 CREATE TABLE IF NOT EXISTS user_finance_profile (
     user_id INT PRIMARY KEY,
     salary DECIMAL(15, 2),
@@ -109,17 +108,16 @@ CREATE TABLE IF NOT EXISTS user_finance_profile (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- NEW TABLE: user_finance_summary
--- Stores monthly-level financial insights, used for the dashboard (React UI)
+-- Monthly Dashboard Summary
 CREATE TABLE IF NOT EXISTS user_finance_summary (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    month_year VARCHAR(7) NOT NULL, -- Format: 'YYYY-MM'
-    monthly_spending DECIMAL(15, 2) DEFAULT 0.00, -- Total spending for the month
-    savings_current DECIMAL(15, 2) DEFAULT 0.00,  -- Current saved amount
-    savings_goal DECIMAL(15, 2) DEFAULT 0.00,     -- Goal for savings
-    ai_optimization DECIMAL(5, 2) DEFAULT 0.00,   -- Percentage optimization (AI insights)
+    month_year VARCHAR(7) NOT NULL, -- 'YYYY-MM'
+    monthly_spending DECIMAL(15, 2) DEFAULT 0.00,
+    savings_current DECIMAL(15, 2) DEFAULT 0.00,
+    savings_goal DECIMAL(15, 2) DEFAULT 0.00,
+    ai_optimization DECIMAL(5, 2) DEFAULT 0.00,
     last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE (user_id, month_year) -- Ensure one record per month per user
+    UNIQUE (user_id, month_year)
 );

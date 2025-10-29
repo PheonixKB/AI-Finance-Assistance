@@ -9,6 +9,7 @@ from ai import router as ai_router
 from routes.upload_routes import router as upload_router
 from routes.content_routes import router as content_router # Import content router
 from permissions import router as permissions_router
+from finance_data import router as finance_router
 
 # Initialize the FastAPI application with a title
 app = FastAPI(title="AI Finance Assistant")
@@ -39,3 +40,4 @@ app.include_router(ai_router, prefix="/api")          # Routes for AI-related op
 app.include_router(upload_router, prefix="/api")      # Routes for data upload functionalities
 app.include_router(content_router, prefix="/api")     # Routes for general content and finance data
 app.include_router(permissions_router, prefix="/api")  # Routes for managing user permissions
+app.include_router(finance_router, prefix="/api")    # Routes for finance data retrieval

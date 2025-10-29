@@ -1,3 +1,4 @@
+// interface/src/pages/FinanceData.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
