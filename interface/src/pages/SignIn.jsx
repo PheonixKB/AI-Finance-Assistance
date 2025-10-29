@@ -45,7 +45,7 @@ const SignIn = () => {
       // Parse the successful response
       const data = await response.json();
       localStorage.setItem('token', data.access_token); // Store the JWT token
-      navigate('/chat'); // Redirect to the chat page after successful login
+      navigate('/'); // Redirect to the home page after successful login
     } catch (err) {
       setError(err.message); // Display any caught errors
     }

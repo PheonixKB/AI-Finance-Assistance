@@ -38,19 +38,23 @@ const Hero = () => {
             
             {/* Call-to-action buttons */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <button
+              <a
+                href="/chat"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-8 py-4 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200 hover:scale-105 flex items-center justify-center space-x-2"
-                onClick={() => navigate('/signup')} // Navigate to sign-up page
               >
                 <span>Start Free Trial</span>
                 <ArrowRight className="w-5 h-5" />
-              </button>
-              <button
+              </a>
+              <a
+                href="/chat"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-all duration-200"
-                onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })} // Scroll to features section
               >
                 Watch Demo
-              </button>
+              </a>
             </div>
             
             {/* Key features/benefits */}
