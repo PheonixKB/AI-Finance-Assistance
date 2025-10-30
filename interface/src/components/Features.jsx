@@ -1,5 +1,7 @@
+// interface/src/components/Features.jsx
 import React from 'react';
 import { BarChart3, Wallet, Target, TrendingUp, CreditCard, PieChart } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 const Features = () => {
   const features = [
@@ -7,39 +9,46 @@ const Features = () => {
       icon: <BarChart3 className="w-8 h-8 text-blue-600" />,
       title: "Smart Budgeting",
       description: "AI automatically categorizes expenses and creates personalized budgets based on your spending patterns.",
-      gradient: "from-blue-500 to-blue-600"
+      gradient: "from-blue-500 to-blue-600",
+      route: "/smart-budgeting"
     },
     {
       icon: <TrendingUp className="w-8 h-8 text-green-600" />,
       title: "Investment Insights",
       description: "Get AI-powered investment recommendations tailored to your risk tolerance and financial goals.",
-      gradient: "from-green-500 to-green-600"
+      gradient: "from-green-500 to-green-600",
+      route: "/investment-insights"
     },
     {
       icon: <Target className="w-8 h-8 text-purple-600" />,
       title: "Goal Tracking",
       description: "Set financial goals and track progress with intelligent milestones and achievement predictions.",
-      gradient: "from-purple-500 to-purple-600"
+      gradient: "from-purple-500 to-purple-600",
+      route: "/goal-tracking"
     },
     {
       icon: <Wallet className="w-8 h-8 text-orange-600" />,
       title: "Expense Optimization",
       description: "Identify unnecessary expenses and get suggestions to save more money each month.",
-      gradient: "from-orange-500 to-orange-600"
+      gradient: "from-orange-500 to-orange-600",
+      route: "/expense-optimization"
     },
     {
       icon: <CreditCard className="w-8 h-8 text-red-600" />,
       title: "Bill Management",
       description: "Never miss a payment with AI-powered bill reminders and automatic payment scheduling.",
-      gradient: "from-red-500 to-red-600"
+      gradient: "from-red-500 to-red-600",
+      route: "/bill-management"
     },
     {
       icon: <PieChart className="w-8 h-8 text-indigo-600" />,
       title: "Wealth Analytics",
       description: "Comprehensive wealth tracking with net worth calculations and portfolio performance analysis.",
-      gradient: "from-indigo-500 to-indigo-600"
+      gradient: "from-indigo-500 to-indigo-600",
+      route: "/wealth-analytics"
     }
   ];
+  const navigate = useNavigate();
 
   return (
     <section id="features" className="py-20 bg-white">
@@ -57,6 +66,7 @@ const Features = () => {
           {features.map((feature, index) => (
             <div
               key={index}
+              onClick={() => navigate(feature.route)}
               className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100"
             >
               <div className="mb-6">

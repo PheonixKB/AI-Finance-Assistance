@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
+import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS } from 'chart.js/auto';
 
 const FinanceData = () => {
   const [username, setUsername] = useState('');
@@ -31,6 +33,21 @@ const FinanceData = () => {
 
   const [transactions, setTransactions] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+
+  // Budget Summary States
+  const [budgetSummary, setBudgetSummary] = useState(null);
+  const [chartData, setChartData] = useState(null);
+  const [investmentInsights, setInvestmentInsights] = useState(null);
+
+  // Goals States
+  const [goals, setGoals] = useState([]);
+  const [newGoal, setNewGoal] = useState({
+    goal_name: '',
+    target_amount: '',
+    deadline: '',
+  });
+  const [editingGoalId, setEditingGoalId] = useState(null);
+  const [goalProgressInsights, setGoalProgressInsights] = useState({});
 
   // --- API Calls ---
   const fetchSummaryFinance = async (token) => {
@@ -132,6 +149,53 @@ const FinanceData = () => {
       setAccounts(data);
     } catch (error) {
       console.error("Error fetching accounts:", error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const fetchBudgetSummary = async (token) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/budget-summary', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch budget summary');
+      const data = await response.json();
+      setBudgetSummary(data);
+
+      if (data.categorized_expenses && data.categorized_expenses.length > 0) {
+        const labels = data.categorized_expenses.map(exp => exp.category);
+        const totals = data.categorized_expenses.map(exp => exp.total_spent);
+        setChartData({
+          labels: labels,
+          datasets: [
+            {
+              data: totals,
+              backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+              ],
+              hoverBackgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+              ],
+            },
+          ],
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching budget summary:", error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const fetchInvestmentInsights = async (token) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/investment-insights', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch investment insights');
+      const data = await response.json();
+      setInvestmentInsights(data);
+    } catch (error) {
+      console.error("Error fetching investment insights:", error);
       setMessage({ type: 'error', text: error.message });
     }
   };
@@ -280,6 +344,8 @@ const FinanceData = () => {
         fetchSummaryFinance(token);
         fetchInvestments(token);
         fetchAccounts(token);
+        fetchBudgetSummary(token);
+        fetchInvestmentInsights(token);
       } catch (error) {
         console.error("Error decoding token:", error);
         localStorage.removeItem('token');
@@ -364,6 +430,26 @@ const FinanceData = () => {
           </div>
         </div>
 
+        {/* Smart Budgeting */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-white">Smart Budgeting</h3>
+          {budgetSummary && budgetSummary.categorized_expenses && budgetSummary.categorized_expenses.length > 0 ? (
+            <div className="bg-white/10 p-4 rounded-lg">
+              <h4 className="text-white font-semibold mb-2">Monthly Spending by Category</h4>
+              {chartData && <Pie data={chartData} />}
+              <h4 className="text-white font-semibold mt-4 mb-2">AI Budget Suggestions</h4>
+              <p className="text-gray-300 text-sm whitespace-pre-wrap">{budgetSummary.suggestions}</p>
+            <div className="text-center mt-4">
+              <button onClick={() => navigate('/smart-budgeting')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                View Smart Budgeting
+              </button>
+            </div>
+            </div>
+          ) : (
+            <div className="text-gray-400 text-sm">Upload transactions and set your salary to get smart budgeting insights.</div>
+          )}
+        </div>
+
         {/* Investments */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-white">Investments</h3>
@@ -398,6 +484,19 @@ const FinanceData = () => {
               Upload Investments
             </button>
           </div>
+        </div>
+
+        {/* Investment Insights */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-white">Investment Insights</h3>
+          {investmentInsights && investmentInsights.insights ? (
+            <div className="bg-white/10 p-4 rounded-lg">
+              <h4 className="text-white font-semibold mb-2">AI-Powered Recommendations</h4>
+              <p className="text-gray-300 text-sm whitespace-pre-wrap">{investmentInsights.insights}</p>
+            </div>
+          ) : (
+            <div className="text-gray-400 text-sm">Complete your finance profile and upload investments to get personalized insights.</div>
+          )}
         </div>
 
         {/* Accounts */}

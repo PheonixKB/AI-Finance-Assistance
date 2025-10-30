@@ -81,12 +81,26 @@ CREATE TABLE IF NOT EXISTS user_transactions (
     account_id BIGINT NOT NULL,
     date DATE NOT NULL,
     description VARCHAR(255),
+    category VARCHAR(255),
     amount DECIMAL(15,2) NOT NULL,
     transaction_type ENUM('credit', 'debit') DEFAULT 'debit',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (account_id) REFERENCES user_accounts(id) ON DELETE CASCADE,
     INDEX (user_id),
     INDEX (account_id)
+);
+
+-- User Goals
+CREATE TABLE IF NOT EXISTS user_goals (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    goal_name VARCHAR(255) NOT NULL,
+    target_amount DECIMAL(15, 2) NOT NULL,
+    current_progress DECIMAL(15, 2) DEFAULT 0.00,
+    deadline DATE NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX (user_id)
 );
 
 -- Permissions

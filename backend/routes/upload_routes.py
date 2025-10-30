@@ -6,6 +6,7 @@ import io
 from db import get_db_connection
 from users import get_current_user
 import datetime
+from ai import openai_client
 
 router = APIRouter(prefix="/upload", tags=["Upload"])
 
@@ -100,6 +101,17 @@ async def upload_transactions(
                 # Description
                 description = str(row.get(descr_col, "")).strip() if descr_col else "No Description"
 
+                # Use OpenAI to categorize the transaction
+                prompt = f"Categorize this transaction: '{description}' into one of these: Food, Housing, Transportation, Utilities, Entertainment, Others."
+                response = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant that categorizes financial transactions."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                category = response.choices[0].message.content.strip()
+
                 # Amount logic
                 if amount_col:
                     amount = float(row[amount_col])
@@ -108,7 +120,7 @@ async def upload_transactions(
                     credit = float(row.get(credit_col, 0) or 0)
                     amount = credit - debit  # inflow positive, outflow negative
 
-                transactions_to_insert.append((user_id, resolved_acc_id, date_val.date(), description, amount))
+                transactions_to_insert.append((user_id, resolved_acc_id, date_val.date(), description, amount, category))
 
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Row {index + 2} error: {str(e)}")
@@ -117,11 +129,17 @@ async def upload_transactions(
             raise HTTPException(status_code=400, detail="No valid transactions found in the uploaded file.")
 
         # Insert all transactions
-        for user_id, acc_id, date, description, amount in transactions_to_insert:
+        for user_id, acc_id, date, description, amount, category in transactions_to_insert:
             cursor.execute(
-                "INSERT INTO user_transactions (user_id, account_id, date, description, amount) VALUES (%s, %s, %s, %s, %s)",
-                (user_id, acc_id, date, description, amount)
+                "INSERT INTO user_transactions (user_id, account_id, date, description, amount, category) VALUES (%s, %s, %s, %s, %s, %s)",
+                (user_id, acc_id, date, description, amount, category)
             )
+            # If the transaction is a saving, update the goal progress
+            if category.lower() == 'savings':
+                cursor.execute(
+                    "UPDATE user_goals SET current_progress = current_progress + %s WHERE user_id = %s",
+                    (amount, user_id)
+                )
 
         conn.commit()
         return {"message": f"Successfully uploaded {len(transactions_to_insert)} transactions."}

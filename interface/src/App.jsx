@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import AIChat from './pages/AIChat'; // Import AIChat component for the AI chat page
 import Profile from './pages/Profile'; // Import Profile component for the user profile page
 import FinanceData from './pages/FinanceData'; // Import FinanceData component for the finance data page
+import SmartBudgeting from './pages/SmartBudgeting';
 import FinanceQuestionnaire from './pages/FinanceQuestionnaire'; // Import FinanceQuestionnaire component
 import AllInvestments from './pages/AllInvestments';
 import AllTransactions from './pages/AllTransactions';
@@ -54,6 +55,14 @@ function App() {
           element={
             <AuthGuard> {/* AuthGuard checks for authentication before rendering FinanceData */}
               <FinanceData />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/smart-budgeting"
+          element={
+            <AuthGuard>
+              <SmartBudgeting />
             </AuthGuard>
           }
         />
