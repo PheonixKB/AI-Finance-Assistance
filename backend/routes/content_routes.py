@@ -25,16 +25,13 @@ class InvestmentUpdate(BaseModel):
 class AccountCreate(BaseModel):
     account_name: str
     bank_name: str
-    account_number: str
-    bank_number: str
     account_type: str
     balance: float = 0.0
 
 class AccountUpdate(BaseModel):
     account_name: str | None = None
     bank_name: str | None = None
-    account_number: str | None = None
-    bank_number: str | None = None
+
     account_type: str | None = None
     balance: float | None = None
 
@@ -45,12 +42,12 @@ class SummaryFinanceUpdate(BaseModel):
 class TransactionCreate(BaseModel):
     account_id: int
     date: str # YYYY-MM-DD
-    descr: str
+    description: str
     amount: float
 
 class TransactionUpdate(BaseModel):
     date: str | None = None
-    descr: str | None = None
+    description: str | None = None
     amount: float | None = None
 
 class UserFinanceProfileCreate(BaseModel):
@@ -347,8 +344,8 @@ async def create_transaction(request: Request, transaction: TransactionCreate):
             raise HTTPException(status_code=404, detail="Account not found or not authorized")
 
         cursor.execute(
-            "INSERT INTO user_transactions (user_id, account_id, date, descr, amount) VALUES (%s, %s, %s, %s, %s)",
-            (user["id"], transaction.account_id, transaction.date, transaction.descr, transaction.amount)
+            "INSERT INTO user_transactions (user_id, account_id, date, description, amount) VALUES (%s, %s, %s, %s, %s)",
+            (user["id"], transaction.account_id, transaction.date, transaction.description, transaction.amount)
         )
         conn.commit()
         return {"id": cursor.lastrowid, **transaction.dict()}
@@ -429,7 +426,7 @@ async def get_account_transactions(account_id: int, request: Request):
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Account not found or not authorized")
 
-        cursor.execute("SELECT id, date, descr, amount FROM user_transactions WHERE account_id = %s ORDER BY date ASC", (account_id,))
+        cursor.execute("SELECT id, date, description, amount FROM user_transactions WHERE account_id = %s ORDER BY date ASC", (account_id,))
         return cursor.fetchall()
     finally:
         cursor.close()
@@ -443,7 +440,7 @@ async def get_all_transactions(request: Request):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id, account_id, date, descr, amount FROM user_transactions WHERE user_id = %s ORDER BY date ASC", (user["id"],))
+        cursor.execute("SELECT id, account_id, date, description, amount FROM user_transactions WHERE user_id = %s ORDER BY date ASC", (user["id"],))
         return cursor.fetchall()
     finally:
         cursor.close()

@@ -23,8 +23,7 @@ const FinanceData = () => {
   const [newAccount, setNewAccount] = useState({
     account_name: '',
     bank_name: '',
-    account_number: '',
-    bank_number: '',
+
     account_type: '',
     balance: '',
   });
@@ -151,7 +150,7 @@ const FinanceData = () => {
       });
       if (!response.ok) throw new Error('Failed to create account');
       setMessage({ type: 'success', text: 'Account created!' });
-      setNewAccount({ account_name: '', bank_name: '', account_number: '', bank_number: '', account_type: '', balance: '' });
+      setNewAccount({ account_name: '', bank_name: '', account_number: '', account_type: '', balance: '' });
       fetchAccounts(token);
     } catch (error) {
       console.error("Error creating account:", error);
@@ -368,7 +367,7 @@ const FinanceData = () => {
         {/* Investments */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-white">Investments</h3>
-          {investments.map((inv) => (
+          {investments.slice(0, 10).map((inv) => (
             <div key={inv.id} className="bg-white/10 p-4 rounded-lg flex justify-between items-center">
               <div>
                 <p className="text-white font-semibold">{inv.name} ({inv.investment_type})</p>
@@ -379,7 +378,13 @@ const FinanceData = () => {
               </div>
             </div>
           ))}
-
+          {investments.length > 10 && (
+            <div className="text-center mt-4">
+              <button onClick={() => navigate('/all-investments')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Read More
+              </button>
+            </div>
+          )}
           {/* File Upload Section for Investments */}
           <div className="bg-white/10 p-4 rounded-lg mt-4">
             <h4 className="text-white font-semibold mb-2">Upload Investments (Excel/PDF)</h4>
@@ -416,8 +421,8 @@ const FinanceData = () => {
               <h4 className="text-white font-semibold mb-2">Edit Account</h4>
               <input type="text" placeholder="Account Name" value={accounts.find(acc => acc.id === editingAccountId)?.account_name || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, account_name: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="text" placeholder="Bank Name" value={accounts.find(acc => acc.id === editingAccountId)?.bank_name || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, bank_name: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <input type="text" placeholder="Account Number" value={accounts.find(acc => acc.id === editingAccountId)?.account_number || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, account_number: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <input type="text" placeholder="Bank Number" value={accounts.find(acc => acc.id === editingAccountId)?.bank_number || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, bank_number: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+
               <input type="text" placeholder="Account Type" value={accounts.find(acc => acc.id === editingAccountId)?.account_type || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, account_type: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="number" placeholder="Balance" value={accounts.find(acc => acc.id === editingAccountId)?.balance || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, balance: parseFloat(e.target.value) } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <button onClick={() => updateAccount(editingAccountId)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2">Save</button>
@@ -428,8 +433,8 @@ const FinanceData = () => {
             <h4 className="text-white font-semibold mb-2">Add New Account</h4>
             <input type="text" placeholder="Account Name" value={newAccount.account_name} onChange={(e) => setNewAccount({ ...newAccount, account_name: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
             <input type="text" placeholder="Bank Name" value={newAccount.bank_name} onChange={(e) => setNewAccount({ ...newAccount, bank_name: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="text" placeholder="Account Number" value={newAccount.account_number} onChange={(e) => setNewAccount({ ...newAccount, account_number: e.target.value })} maxLength="20" className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="text" placeholder="Bank Number" value={newAccount.bank_number} onChange={(e) => setNewAccount({ ...newAccount, bank_number: e.target.value })} maxLength="20" className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+
             <select value={newAccount.account_type} onChange={(e) => setNewAccount({ ...newAccount, account_type: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Select Account Type</option>
               <option value="saving">Saving</option>
@@ -456,10 +461,10 @@ const FinanceData = () => {
                 ))}
               </select>
 
-              {transactions.map(tx => (
+              {transactions.slice(0, 10).map(tx => (
                 <div key={tx.id} className="flex justify-between items-center mt-2">
                   <div>
-                    <p className="text-white font-semibold">{tx.descr} ({tx.date})</p>
+                    <p className="text-white font-semibold">{tx.description} ({tx.date})</p>
                     <p className="text-gray-300 text-sm">Amount: {tx.amount}</p>
                   </div>
                   <div>
@@ -467,7 +472,13 @@ const FinanceData = () => {
                   </div>
                 </div>
               ))}
-
+              {transactions.length > 10 && (
+                <div className="text-center mt-4">
+                  <button onClick={() => navigate('/all-transactions')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Read More
+                  </button>
+                </div>
+              )}
               {/* File Upload Section */}
               <div className="bg-white/10 p-4 rounded-lg mt-4">
                 <h4 className="text-white font-semibold mb-2">Upload Transactions (Excel/PDF)</h4>

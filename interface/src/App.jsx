@@ -9,6 +9,8 @@ import AIChat from './pages/AIChat'; // Import AIChat component for the AI chat 
 import Profile from './pages/Profile'; // Import Profile component for the user profile page
 import FinanceData from './pages/FinanceData'; // Import FinanceData component for the finance data page
 import FinanceQuestionnaire from './pages/FinanceQuestionnaire'; // Import FinanceQuestionnaire component
+import AllInvestments from './pages/AllInvestments';
+import AllTransactions from './pages/AllTransactions';
 // Import authentication guard component
 import AuthGuard from './components/AuthGuard';
 
@@ -52,6 +54,40 @@ function App() {
           element={
             <AuthGuard> {/* AuthGuard checks for authentication before rendering FinanceData */}
               <FinanceData />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/all-investments"
+          element={
+            <AuthGuard>
+              <AllInvestments />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/all-transactions"
+          element={
+            <AuthGuard>
+              <AllTransactions />
+            </AuthGuard>
+          }
+        />
+        {/* The All Investments route is protected by AuthGuard */}
+        <Route
+          path="/all-investments"
+          element={
+            <AuthGuard> {/* AuthGuard checks for authentication before rendering AllInvestments */}
+              <AllInvestments />
+            </AuthGuard>
+          }
+        />
+        {/* The All Transactions route is protected by AuthGuard */}
+        <Route
+          path="/all-transactions"
+          element={
+            <AuthGuard> {/* AuthGuard checks for authentication before rendering AllTransactions */}
+              <AllTransactions />
             </AuthGuard>
           }
         />

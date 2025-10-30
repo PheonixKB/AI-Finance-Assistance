@@ -98,7 +98,7 @@ async def upload_transactions(
                     continue
 
                 # Description
-                descr = str(row.get(descr_col, "")).strip() if descr_col else "No Description"
+                description = str(row.get(descr_col, "")).strip() if descr_col else "No Description"
 
                 # Amount logic
                 if amount_col:
@@ -108,7 +108,7 @@ async def upload_transactions(
                     credit = float(row.get(credit_col, 0) or 0)
                     amount = credit - debit  # inflow positive, outflow negative
 
-                transactions_to_insert.append((user_id, resolved_acc_id, date_val.date(), descr, amount))
+                transactions_to_insert.append((user_id, resolved_acc_id, date_val.date(), description, amount))
 
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Row {index + 2} error: {str(e)}")
@@ -117,10 +117,10 @@ async def upload_transactions(
             raise HTTPException(status_code=400, detail="No valid transactions found in the uploaded file.")
 
         # Insert all transactions
-        for user_id, acc_id, date, descr, amount in transactions_to_insert:
+        for user_id, acc_id, date, description, amount in transactions_to_insert:
             cursor.execute(
-                "INSERT INTO user_transactions (user_id, account_id, date, descr, amount) VALUES (%s, %s, %s, %s, %s)",
-                (user_id, acc_id, date, descr, amount)
+                "INSERT INTO user_transactions (user_id, account_id, date, description, amount) VALUES (%s, %s, %s, %s, %s)",
+                (user_id, acc_id, date, description, amount)
             )
 
         conn.commit()
@@ -178,10 +178,12 @@ async def upload_investments(
                 'investment': 'investment_type',
 
                 'amount invested (₹)': 'purchase_price',
+                'amount invested ($)': 'purchase_price',
                 'amount invested': 'purchase_price',
                 'investment amount': 'purchase_price',
 
                 'current value (₹)': 'current_price',
+                'current value ($)': 'current_price',
                 'current value': 'current_price',
                 'value now': 'current_price',
 
@@ -205,7 +207,7 @@ async def upload_investments(
                 'purchase_price', 'current_price', 'purchase_date'
             ]
 
-            missing_cols = [col for col in required_cols if col not in df.columns]
+            missing_cols = [col for col in required_cols if col not in df.columns and col != 'quantity']
             if missing_cols:
                 raise HTTPException(
                     status_code=400,
