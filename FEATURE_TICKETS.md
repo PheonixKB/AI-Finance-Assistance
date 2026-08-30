@@ -73,16 +73,16 @@ Each ticket is a discrete, actionable task. When picking up work:
 
 | Ticket ID | Title | Priority | Dependencies | Acceptance Criteria | Files to Modify | Done | Updated |
 |-----------|-------|----------|--------------|---------------------|-----------------|------|---------|
-| FEA-1.1 | Add Backend Smoke Tests | P1 | — | `pytest tests/` passes with 20+ tests | `backend/tests/` | [ ] | |
-| FEA-1.2 | Add Frontend Smoke Tests | P1 | — | `vitest run` passes with 10+ tests | `interface/src/__tests__/` | [ ] | |
-| FEA-1.3 | Add Error Boundaries | P2 | — | Unhandled render error shows fallback UI | `interface/src/components/ErrorBoundary.jsx`, `interface/src/main.jsx` | [ ] | |
-| FEA-1.4 | Add Loading Skeletons | P2 | — | Every async op shows skeleton, not text | `interface/src/components/Skeleton.jsx`, all pages | [ ] | |
-| FEA-1.5 | Map Server Errors to Generic Messages | P2 | — | No stack traces or internal strings visible to users | `interface/src/apiService.js` | [ ] | |
-| FEA-1.6 | Add CSV Upload Support | P2 | — | CSV uploads parse correctly | `backend/routes/upload_routes.py` | [ ] | |
-| FEA-1.7 | Add Account Number Field | P2 | — | Account number stored; UI shows masked (last 4) | `backend/data.sql`, `backend/routes/content_routes.py`, `interface/src/pages/FinanceData.jsx` | [ ] | |
-| FEA-1.8 | Replace Debug print() with Logging | P2 | — | No `print()` calls in backend | `backend/users.py`, `backend/content_routes.py`, `backend/ai.py` | [ ] | |
-| FEA-1.9 | Add API Versioning | P2 | FEA-0.5 | All routes under `/api/v1/*` | `backend/main.py`, `interface/src/apiService.js` | [ ] | |
-| FEA-1.10 | Add Correlation IDs | P3 | FEA-1.1 | Every log entry has `correlation_id` | `backend/main.py`, `backend/routes/*.py` | [ ] | |
+| FEA-1.1 | Add Backend Smoke Tests | P1 | — | `pytest tests/` passes with 20+ tests | `backend/tests/` | [x] | 2026-08-30 |
+| FEA-1.2 | Add Frontend Smoke Tests | P1 | — | `vitest run` passes with 10+ tests | `interface/src/__tests__/` | [x] | 2026-08-30 |
+| FEA-1.3 | Add Error Boundaries | P2 | — | Unhandled render error shows fallback UI | `interface/src/components/ErrorBoundary.jsx`, `interface/src/main.jsx` | [x] | 2026-08-30 |
+| FEA-1.4 | Add Loading Skeletons | P2 | — | Every async op shows skeleton, not text | `interface/src/components/Skeleton.jsx`, all pages | [x] | 2026-08-30 |
+| FEA-1.5 | Map Server Errors to Generic Messages | P2 | — | No stack traces or internal strings visible to users | `interface/src/apiService.js` | [x] | 2026-08-30 |
+| FEA-1.6 | Add CSV Upload Support | P2 | — | CSV uploads parse correctly | `backend/routes/upload_routes.py` | [x] | 2026-08-30 |
+| FEA-1.7 | Add Account Number Field | P2 | — | Account number stored; UI shows masked (last 4) | `backend/data.sql`, `backend/routes/content_routes.py`, `interface/src/pages/FinanceData.jsx` | [x] | 2026-08-30 |
+| FEA-1.8 | Replace Debug print() with Logging | P2 | — | No `print()` calls in backend | `backend/users.py`, `backend/content_routes.py`, `backend/ai.py` | [x] | 2026-08-30 |
+| FEA-1.9 | Add API Versioning | P2 | FEA-0.5 | All routes under `/api/v1/*` | `backend/main.py`, `interface/src/apiService.js` | [x] | 2026-08-30 |
+| FEA-1.10 | Add Correlation IDs | P3 | FEA-1.1 | Every log entry has `correlation_id` | `backend/main.py`, `backend/routes/*.py` | [x] | 2026-08-30 |
 
 ### FEA-1.1 Sub-tasks (Backend Tests)
 
@@ -97,7 +97,7 @@ Each ticket is a discrete, actionable task. When picking up work:
 | FEA-1.1.7 | Test chat session CRUD | Verify create/get/update/delete chat sessions | [x] | |
 | FEA-1.1.8 | Test permissions logic | Verify default permissions, DB return, model fields | [x] | |
 | FEA-1.1.9 | Test rate limit values | Verify `FREE_AI_LIMIT` and `AUTHENTICATED_AI_LIMIT` | [x] | |
-| FEA-1.1.10 | Add endpoint integration tests | Test each CRUD endpoint with mocked DB (future) | [ ] | |
+| FEA-1.1.10 | Add endpoint integration tests | Test each CRUD endpoint with mocked DB (future) | [x] | 38 tests passing |
 
 ### FEA-1.2 Sub-tasks (Frontend Tests)
 
