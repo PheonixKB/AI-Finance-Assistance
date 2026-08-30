@@ -1,6 +1,7 @@
 import os
 import datetime
 import secrets
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
@@ -8,6 +9,8 @@ from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from db import get_db_connection
+
+logger = logging.getLogger(__name__)
 
 # SendGrid Imports for email functionality
 try:
@@ -90,7 +93,7 @@ async def update_user_me(user_update: UserUpdate, current_user: dict = Depends(g
             raise HTTPException(status_code=400, detail="Username already taken")
 
         # Update the username in the database
-        print(f"Updating username to: {user_update.username} for user ID: {current_user['id']}")
+        logger.info("Updating username to: %s for user ID: %s", user_update.username, current_user['id'])
         cursor.execute("UPDATE users SET username=%s WHERE id=%s", (user_update.username, current_user['id']))
         conn.commit()
 
@@ -125,7 +128,7 @@ async def delete_user_me(current_user: dict = Depends(get_current_user)):
 # Helper function to send welcome email using SendGrid
 async def send_welcome_email(recipient_email: str, username: str):
     if not SENDGRID_API_KEY or not SENDER_EMAIL:
-        print("SendGrid API key or sender email not configured. Skipping welcome email.")
+        logger.warning("SendGrid API key or sender email not configured. Skipping welcome email.")
         return
 
     message = Mail(
@@ -137,9 +140,9 @@ async def send_welcome_email(recipient_email: str, username: str):
     try:
         sg = sendgrid.SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
-        print(f"Welcome email sent to {recipient_email}. Status Code: {response.status_code}")
+        logger.info("Welcome email sent to %s. Status Code: %s", recipient_email, response.status_code)
     except Exception as e:
-        print(f"Error sending welcome email to {recipient_email}: {e}")
+        logger.error("Error sending welcome email to %s: %s", recipient_email, e)
 
 # API endpoint for user registration
 @router.post("/register")

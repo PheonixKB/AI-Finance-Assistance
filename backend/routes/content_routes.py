@@ -1,4 +1,5 @@
 # backend/routes/content_routes.py
+import logging
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from db import get_db_connection
 from ai import get_openai_client
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # ---------------------- MODELS ----------------------
 
@@ -745,15 +747,15 @@ async def create_finance_profile(request: Request, profile: UserFinanceProfileCr
         values_to_insert = [user["id"]]
 
         profile_data = profile.dict(exclude_unset=True)
-        print(f"Profile data from frontend: {profile_data}")
+        logger.debug("Profile data from frontend: %s", profile_data)
         for key, value in profile_data.items():
             if isinstance(value, str) and value.strip() == '':
                 value = None
             fields_to_insert.append(key)
             values_to_insert.append(value)
 
-        print(f"Fields to insert: {fields_to_insert}")
-        print(f"Values to insert: {values_to_insert}")
+        logger.debug("Fields to insert: %s", fields_to_insert)
+        logger.debug("Values to insert: %s", values_to_insert)
 
         if len(fields_to_insert) == 1: # Only user_id is present, meaning no other data was provided
             # Insert only user_id, other fields will be NULL by default
