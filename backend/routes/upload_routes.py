@@ -10,10 +10,12 @@ from ai import get_openai_client
 
 router = APIRouter(prefix="/upload", tags=["Upload"])
 
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+
 @router.post("/transactions")
 async def upload_transactions(
     file: UploadFile = File(...),
-    account_id: int = None,  # Optional query param (fallback)
+    account_id: int = None,
     current_user: dict = Depends(get_current_user)
 ):
     if not current_user:
@@ -28,6 +30,13 @@ async def upload_transactions(
     ]
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type. Only .xlsx or .xls allowed.")
+
+    # Check file size before reading into memory
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024*1024)}MB.")
 
     # Read file
     contents = await file.read()
@@ -159,8 +168,8 @@ async def upload_transactions(
 
 @router.post("/investments")
 async def upload_investments(
-    file: UploadFile = File(...),
-    request: Request = Request,
+    file: UploadFile,
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
     if not current_user:
@@ -178,6 +187,13 @@ async def upload_investments(
             status_code=400,
             detail="Invalid file type. Only Excel (.xlsx, .xls) or PDF files are allowed."
         )
+
+    # Check file size before reading into memory
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024*1024)}MB.")
 
     contents = await file.read()
     investments_to_insert = []
