@@ -21,6 +21,7 @@ const FinanceData = () => {
   const [newAccount, setNewAccount] = useState({
     account_name: '',
     bank_name: '',
+    account_number: '',
     account_type: '',
     balance: '',
   });
@@ -533,6 +534,9 @@ const FinanceData = () => {
             <div key={acc.id} className="bg-white/10 p-4 rounded-lg flex justify-between items-center">
               <div>
                 <p className="text-white font-semibold">{acc.account_name} ({acc.bank_name})</p>
+                <p className="text-gray-300 text-sm">
+                  {acc.account_number ? `****${acc.account_number.slice(-4)}` : 'No account number'}
+                </p>
                 <p className="text-gray-300 text-sm">Balance: {acc.balance}</p>
               </div>
               <div>
@@ -556,6 +560,13 @@ const FinanceData = () => {
                 placeholder="Bank Name"
                 value={accountList.find((acc) => acc.id === editingAccountId)?.bank_name || ''}
                 onChange={(e) => setAccountList(accountList.map((acc) => acc.id === editingAccountId ? { ...acc, bank_name: e.target.value } : acc))}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Account Number"
+                value={accountList.find((acc) => acc.id === editingAccountId)?.account_number || ''}
+                onChange={(e) => setAccountList(accountList.map((acc) => acc.id === editingAccountId ? { ...acc, account_number: e.target.value } : acc))}
                 className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
@@ -585,18 +596,25 @@ const FinanceData = () => {
               onChange={(e) => setNewAccount({ ...newAccount, account_name: e.target.value })}
               className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <input
-              type="text"
-              placeholder="Bank Name"
-              value={newAccount.bank_name}
-              onChange={(e) => setNewAccount({ ...newAccount, bank_name: e.target.value })}
-              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <select
-              value={newAccount.account_type}
-              onChange={(e) => setNewAccount({ ...newAccount, account_type: e.target.value })}
-              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
+              <input
+                type="text"
+                placeholder="Bank Name"
+                value={newAccount.bank_name}
+                onChange={(e) => setNewAccount({ ...newAccount, bank_name: e.target.value })}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Account Number"
+                value={newAccount.account_number}
+                onChange={(e) => setNewAccount({ ...newAccount, account_number: e.target.value })}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <select
+                value={newAccount.account_type}
+                onChange={(e) => setNewAccount({ ...newAccount, account_type: e.target.value })}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
               <option value="">Select Account Type</option>
               <option value="saving">Saving</option>
               <option value="current">Current</option>

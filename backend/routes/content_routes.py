@@ -32,12 +32,14 @@ class InvestmentUpdate(BaseModel):
 class AccountCreate(BaseModel):
     account_name: str
     bank_name: str
+    account_number: str | None = None
     account_type: str
     balance: float = 0.0
 
 class AccountUpdate(BaseModel):
     account_name: str | None = None
     bank_name: str | None = None
+    account_number: str | None = None
     account_type: str | None = None
     balance: float | None = None
 
@@ -256,8 +258,8 @@ async def create_account(request: Request, account: AccountCreate):
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO user_accounts (user_id, account_name, bank_name, account_type, balance) VALUES (%s, %s, %s, %s, %s)",
-            (user["id"], account.account_name, account.bank_name, account.account_type, account.balance)
+            "INSERT INTO user_accounts (user_id, account_name, bank_name, account_number, account_type, balance) VALUES (%s, %s, %s, %s, %s, %s)",
+            (user["id"], account.account_name, account.bank_name, account.account_number, account.account_type, account.balance)
         )
         conn.commit()
         return {"id": cursor.lastrowid, **account.dict()}
@@ -321,7 +323,7 @@ async def get_accounts(request: Request):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id, account_name, bank_name, account_type, balance FROM user_accounts WHERE user_id = %s", (user["id"],))
+        cursor.execute("SELECT id, account_name, bank_name, account_number, account_type, balance FROM user_accounts WHERE user_id = %s", (user["id"],))
         return cursor.fetchall()
     finally:
         cursor.close()

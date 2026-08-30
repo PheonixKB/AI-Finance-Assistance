@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS user_accounts (
     user_id BIGINT NOT NULL,
     account_name VARCHAR(255) NOT NULL,
     bank_name VARCHAR(255) NOT NULL,
+    account_number VARCHAR(20) UNIQUE,
 
     ifsc_code VARCHAR(20),
     account_type VARCHAR(50),
