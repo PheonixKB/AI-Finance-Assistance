@@ -1,6 +1,13 @@
 # backend/main.py
-from fastapi import FastAPI
+import logging
+import uuid
+from contextvars import ContextVar
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
 
 # Import routers for different API sections
 from routes.chat_routes import router as chat_router
@@ -11,8 +18,29 @@ from routes.content_routes import router as content_router # Import content rout
 from permissions import router as permissions_router
 from finance_data import router as finance_router
 
+# Configure logging with correlation ID
+class CorrelationFilter(logging.Filter):
+    def filter(self, record):
+        record.correlation_id = request_id_var.get()
+        return True
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(correlation_id)s] %(levelname)s %(name)s: %(message)s",
+)
+for handler in logging.root.handlers:
+    handler.addFilter(CorrelationFilter())
+
 # Initialize the FastAPI application with a title
 app = FastAPI(title="AI Finance Assistant")
+
+@app.middleware("http")
+async def correlation_id_middleware(request: Request, call_next):
+    correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
+    request_id_var.set(correlation_id)
+    response = await call_next(request)
+    response.headers["X-Correlation-ID"] = correlation_id
+    return response
 
 # Define allowed origins for CORS (Cross-Origin Resource Sharing)
 # This list specifies which frontend domains are allowed to make requests to this backend.

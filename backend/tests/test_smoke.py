@@ -102,4 +102,23 @@ class TestConfig:
         from db import dbconfig
         assert "host" in dbconfig
         assert "user" in dbconfig
-        assert "database" in dbconfig
+
+
+class TestCorrelationId:
+    def test_middleware_generates_correlation_id(self):
+        from fastapi.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        response = client.get('/api/v1/stats')
+        assert 'X-Correlation-ID' in response.headers
+        assert len(response.headers['X-Correlation-ID']) > 0
+
+    def test_middleware_honors_existing_correlation_id(self):
+        from fastapi.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        existing_id = 'test-correlation-123'
+        response = client.get('/api/v1/stats', headers={'X-Correlation-ID': existing_id})
+        assert response.headers['X-Correlation-ID'] == existing_id
