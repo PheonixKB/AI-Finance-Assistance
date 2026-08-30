@@ -10,8 +10,12 @@ from jose import jwt, JWTError
 from db import get_db_connection
 
 # SendGrid Imports for email functionality
-import sendgrid
-from sendgrid.helpers.mail import Mail
+try:
+    import sendgrid
+    from sendgrid.helpers.mail import Mail
+except ImportError:
+    sendgrid = None
+    Mail = None
 
 load_dotenv() # Load environment variables from .env file
 

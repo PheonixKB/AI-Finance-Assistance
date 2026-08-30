@@ -19,8 +19,12 @@ except ImportError:
 # -------------------------------------------------------------------
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
 router = APIRouter()
+
+def get_openai_client():
+    if OpenAI is None or not OPENAI_API_KEY:
+        return None
+    return OpenAI(api_key=OPENAI_API_KEY)
 
 # -------------------------------------------------------------------
 # Limits
@@ -70,9 +74,10 @@ def get_user_finance_data(user_id: int, permissions: dict):
             finance_data["epf"] = cursor.fetchall()
 
         # Fetch credit score
-        cursor.execute("SELECT credit_score FROM user_summary WHERE user_id = %s", (user_id,))
+        if permissions.get("credit_score"):
+            cursor.execute("SELECT credit_score FROM user_summary WHERE user_id = %s", (user_id,))
         row = cursor.fetchone()
-        finance_data["credit_score"] = row["credit_score"] if row else None
+        finance_data["credit_score"] = row["credit_score"] if row and permissions.get("credit_score") else None
 
     finally:
         cursor.close()
