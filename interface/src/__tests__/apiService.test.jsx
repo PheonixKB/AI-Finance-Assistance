@@ -70,6 +70,48 @@ describe('apiService', () => {
       expect(decoded.exp).toBeLessThan(Date.now() / 1000);
     });
   });
+
+  describe('request error mapping', () => {
+    it('maps 500 to generic message', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({ detail: 'Internal server error: DB connection failed' }),
+        })
+      );
+      const { request } = await import('../apiService');
+      await expect(request('/api/test')).rejects.toThrow('Server error. Our team has been notified.');
+    });
+
+    it('maps 404 to generic message', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 404,
+          json: () => Promise.resolve({ detail: 'Not found' }),
+        })
+      );
+      const { request } = await import('../apiService');
+      await expect(request('/api/test')).rejects.toThrow('The requested resource was not found.');
+    });
+
+    it('preserves error status code', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 403,
+          json: () => Promise.resolve({ detail: 'Forbidden' }),
+        })
+      );
+      const { request } = await import('../apiService');
+      try {
+        await request('/api/test');
+      } catch (e) {
+        expect(e.status).toBe(403);
+      }
+    });
+  });
 });
 
 describe('ErrorBoundary', () => {

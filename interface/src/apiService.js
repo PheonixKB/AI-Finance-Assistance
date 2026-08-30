@@ -32,13 +32,26 @@ const request = async (path, options = {}) => {
       localStorage.removeItem('token');
       window.location.href = '/signin';
     }
+    const genericMessages = {
+      400: 'Invalid request. Please check your input and try again.',
+      401: 'Authentication required. Please sign in again.',
+      403: 'You do not have permission to perform this action.',
+      404: 'The requested resource was not found.',
+      413: 'File is too large. Please upload a smaller file.',
+      422: 'The request could not be processed. Please try again.',
+      429: 'Too many requests. Please wait a moment and try again.',
+      500: 'Server error. Our team has been notified.',
+      502: 'Service temporarily unavailable. Please try again later.',
+      503: 'Service temporarily unavailable. Please try again later.',
+    };
     let errorData;
     try {
       errorData = await response.json();
     } catch {
-      errorData = { detail: response.statusText };
+      errorData = {};
     }
-    const error = new Error(errorData.detail || `Request failed: ${response.status}`);
+    const message = genericMessages[response.status] || `Request failed: ${response.status}`;
+    const error = new Error(message);
     error.status = response.status;
     error.data = errorData;
     throw error;
@@ -285,6 +298,7 @@ const content = {
 
 export {
   BASE_URL,
+  request,
   auth,
   chat,
   ai,
