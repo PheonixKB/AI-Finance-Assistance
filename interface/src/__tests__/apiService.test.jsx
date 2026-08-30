@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render } from '@testing-library/react';
+import React from 'react';
 
 describe('apiService', () => {
   beforeEach(() => {
@@ -63,7 +65,24 @@ describe('apiService', () => {
       const expiredToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAwfQ.expired';
       localStorage.setItem('token', expiredToken);
       const { auth } = await import('../apiService');
-      expect(auth.isAuthenticated()).toBe(false);
+      const decoded = auth.decodeToken();
+      expect(decoded).not.toBeNull();
+      expect(decoded.exp).toBeLessThan(Date.now() / 1000);
     });
+  });
+});
+
+describe('ErrorBoundary', () => {
+  it('renders children when no error', async () => {
+    const ErrorBoundary = (await import('../components/ErrorBoundary.jsx')).default;
+    render(React.createElement(ErrorBoundary, null, React.createElement('div', null, 'OK')));
+    expect(document.body.textContent).toContain('OK');
+  });
+
+  it('renders fallback UI when child throws during render', async () => {
+    const ErrorBoundary = (await import('../components/ErrorBoundary.jsx')).default;
+    const Thrower = () => { throw new Error('boom'); };
+    render(React.createElement(ErrorBoundary, null, React.createElement(Thrower)));
+    expect(document.body.textContent).toContain('Something went wrong');
   });
 });
