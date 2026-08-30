@@ -4,6 +4,7 @@ import { Brain, ArrowLeft, BarChart3, PieChart, FileText, Loader } from 'lucide-
 import { auth, content } from '../apiService';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
+import { SkeletonCard, SkeletonText } from '../components/Skeleton';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -62,7 +63,11 @@ const ExpenseOptimization = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12">
-        <Loader className="w-8 h-8 text-white animate-spin" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-6">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonText lines={3} />
+        </div>
       </div>
     );
   }

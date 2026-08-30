@@ -4,6 +4,7 @@ import { Brain, ArrowLeft, PieChart, Loader } from 'lucide-react';
 import { auth, content } from '../apiService';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto';
+import { SkeletonCard } from '../components/Skeleton';
 
 const SmartBudgeting = () => {
   const [username, setUsername] = useState('');
@@ -64,7 +65,10 @@ const SmartBudgeting = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12">
-        <Loader className="w-8 h-8 text-white animate-spin" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-6">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       </div>
     );
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, ArrowLeft, CreditCard, Calendar, Bell, FileText, Loader } from 'lucide-react';
 import { auth, transactions } from '../apiService';
+import { SkeletonCard } from '../components/Skeleton';
 
 const BillManagement = () => {
   const [username, setUsername] = useState('');
@@ -45,7 +46,11 @@ const BillManagement = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12">
-        <Loader className="w-8 h-8 text-white animate-spin" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-6">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       </div>
     );
   }
