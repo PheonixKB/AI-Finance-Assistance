@@ -26,10 +26,12 @@ async def upload_transactions(
     # Validate file type
     allowed_types = [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel"
+        "application/vnd.ms-excel",
+        "text/csv",
+        "application/csv"
     ]
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only .xlsx or .xls allowed.")
+        raise HTTPException(status_code=400, detail="Invalid file type. Only .xlsx, .xls, or .csv allowed.")
 
     # Check file size before reading into memory
     file.file.seek(0, 2)
@@ -41,9 +43,12 @@ async def upload_transactions(
     # Read file
     contents = await file.read()
     try:
-        df = pd.read_excel(io.BytesIO(contents))
+        if file.content_type in ["text/csv", "application/csv"] or file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        else:
+            df = pd.read_excel(io.BytesIO(contents))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Could not read Excel file: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Could not read file: {str(e)}")
 
     # Normalize column names
     df.columns = [str(c).strip().lower() for c in df.columns]
@@ -113,15 +118,19 @@ async def upload_transactions(
                 # Use OpenAI to categorize the transaction
                 prompt = f"Categorize this transaction: '{description}' into one of these: Food, Housing, Transportation, Utilities, Entertainment, Others."
                 client = get_openai_client()
+                category = "Others"
                 if client:
-                    response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant that categorizes financial transactions."},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                category = response.choices[0].message.content.strip()
+                    try:
+                        completion = client.chat.completions.create(
+                            model="gpt-3.5-turbo",
+                            messages=[
+                                {"role": "system", "content": "You are a helpful assistant that categorizes financial transactions."},
+                                {"role": "user", "content": prompt}
+                            ]
+                        )
+                        category = completion.choices[0].message.content.strip()
+                    except Exception:
+                        pass
 
                 # Amount logic
                 if amount_col:
@@ -181,11 +190,13 @@ async def upload_investments(
     if file.content_type not in [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel",
-        "application/pdf"
+        "application/pdf",
+        "text/csv",
+        "application/csv"
     ]:
         raise HTTPException(
             status_code=400,
-            detail="Invalid file type. Only Excel (.xlsx, .xls) or PDF files are allowed."
+            detail="Invalid file type. Only Excel (.xlsx, .xls), CSV, or PDF files are allowed."
         )
 
     # Check file size before reading into memory
@@ -198,90 +209,94 @@ async def upload_investments(
     contents = await file.read()
     investments_to_insert = []
 
-    # --- Excel processing ---
-    if file.content_type in [
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel"
-    ]:
-        try:
+    # --- Parse file into DataFrame ---
+    try:
+        if file.content_type in ["text/csv", "application/csv"] or (file.filename and file.filename.endswith('.csv')):
+            df = pd.read_csv(io.BytesIO(contents))
+        elif file.content_type in [
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel"
+        ]:
             df = pd.read_excel(io.BytesIO(contents))
-            df.columns = df.columns.str.strip().str.lower()
+        elif file.content_type == "application/pdf":
+            raise HTTPException(
+                status_code=501,
+                detail="PDF processing for investments not yet implemented. Please use Excel or CSV."
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type.")
+        df.columns = df.columns.str.strip().str.lower()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read file: {str(e)}")
 
-            # Auto map human-readable headers to database columns
-            column_map = {
-                'investment type': 'investment_type',
-                'type': 'investment_type',
-                'investment': 'investment_type',
+    # Auto map human-readable headers to database columns
+    column_map = {
+        'investment type': 'investment_type',
+        'type': 'investment_type',
+        'investment': 'investment_type',
 
-                'amount invested (₹)': 'purchase_price',
-                'amount invested ($)': 'purchase_price',
-                'amount invested': 'purchase_price',
-                'investment amount': 'purchase_price',
+        'amount invested (₹)': 'purchase_price',
+        'amount invested ($)': 'purchase_price',
+        'amount invested': 'purchase_price',
+        'investment amount': 'purchase_price',
 
-                'current value (₹)': 'current_price',
-                'current value ($)': 'current_price',
-                'current value': 'current_price',
-                'value now': 'current_price',
+        'current value (₹)': 'current_price',
+        'current value ($)': 'current_price',
+        'current value': 'current_price',
+        'value now': 'current_price',
 
-                'date': 'purchase_date',
-                'purchase date': 'purchase_date',
-                'buy date': 'purchase_date',
+        'date': 'purchase_date',
+        'purchase date': 'purchase_date',
+        'buy date': 'purchase_date',
 
-                'quantity': 'quantity',
-                'units': 'quantity',
-                'shares': 'quantity',
+        'quantity': 'quantity',
+        'units': 'quantity',
+        'shares': 'quantity',
 
-                'name': 'name',
-                'asset name': 'name'
-            }
+        'name': 'name',
+        'asset name': 'name'
+    }
 
-            # Apply mapping
-            df.rename(columns=lambda c: column_map.get(c, c), inplace=True)
+    # Apply mapping
+    df.rename(columns=lambda c: column_map.get(c, c), inplace=True)
 
-            required_cols = [
-                'investment_type', 'name', 'quantity',
-                'purchase_price', 'current_price', 'purchase_date'
-            ]
+    required_cols = [
+        'investment_type', 'name', 'quantity',
+        'purchase_price', 'current_price', 'purchase_date'
+    ]
 
-            missing_cols = [col for col in required_cols if col not in df.columns and col != 'quantity']
-            if missing_cols:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Missing columns after normalization: {missing_cols}. "
-                           f"Your Excel must have headers similar to: {required_cols}. "
-                           f"Found columns: {list(df.columns)}"
-                )
+    missing_cols = [col for col in required_cols if col not in df.columns and col != 'quantity']
+    if missing_cols:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Missing columns after normalization: {missing_cols}. "
+                   f"Your file must have headers similar to: {required_cols}. "
+                   f"Found columns: {list(df.columns)}"
+        )
 
-            # Parse rows
-            for index, row in df.iterrows():
-                try:
-                    investment_type = str(row['investment_type'])
-                    name = str(row['name'])
-                    quantity = float(row['quantity']) if 'quantity' in row and pd.notna(row['quantity']) else 1.0
-                    purchase_price = float(row['purchase_price'])
-                    current_price = float(row['current_price']) if pd.notna(row['current_price']) else None
-                    purchase_date = pd.to_datetime(row['purchase_date']).date() if pd.notna(row['purchase_date']) else None
+    # Parse rows
+    for index, row in df.iterrows():
+        try:
+            investment_type = str(row['investment_type'])
+            name = str(row['name'])
+            quantity = float(row['quantity']) if 'quantity' in row and pd.notna(row['quantity']) else 1.0
+            purchase_price = float(row['purchase_price'])
+            current_price = float(row['current_price']) if pd.notna(row['current_price']) else None
+            purchase_date = pd.to_datetime(row['purchase_date']).date() if pd.notna(row['purchase_date']) else None
 
-                    investments_to_insert.append((
-                        user_id, investment_type, name,
-                        quantity, purchase_price, current_price, purchase_date
-                    ))
-
-                except Exception as e:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Data error in Excel row {index + 2}: {e}. "
-                               "Ensure numeric fields are valid and dates are proper."
-                    )
+            investments_to_insert.append((
+                user_id, investment_type, name,
+                quantity, purchase_price, current_price, purchase_date
+            ))
 
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error processing Excel file: {e}")
-
-    elif file.content_type == "application/pdf":
-        raise HTTPException(
-            status_code=501,
-            detail="PDF processing for investments not yet implemented. Please use Excel."
-        )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Data error in row {index + 2}: {e}. "
+                       "Ensure numeric fields are valid and dates are proper."
+            )
 
     if not investments_to_insert:
         raise HTTPException(status_code=400, detail="No valid investments found in uploaded file.")
