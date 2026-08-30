@@ -76,3 +76,30 @@ class TestAuthGuard:
 
         result = get_current_user(request)
         assert result is None
+
+    def test_login_rate_limiting(self):
+        from fastapi.testclient import TestClient
+        from main import app
+        from unittest.mock import patch, MagicMock
+
+        with patch('users.get_db_connection') as mock_get_conn:
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_cursor.fetchone.return_value = None
+            mock_conn.cursor.return_value = mock_cursor
+            mock_get_conn.return_value = mock_conn
+
+            client = TestClient(app)
+
+            for _ in range(5):
+                response = client.post(
+                    '/api/login',
+                    data={"username": "test@test.com", "password": "wrong"},
+                )
+                assert response.status_code == 401
+
+            response = client.post(
+                '/api/login',
+                data={"username": "test@test.com", "password": "wrong"},
+            )
+            assert response.status_code == 429

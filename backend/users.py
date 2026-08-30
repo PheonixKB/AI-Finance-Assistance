@@ -22,6 +22,10 @@ load_dotenv() # Load environment variables from .env file
 router = APIRouter() # Initialize FastAPI router for user-related routes
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # Password hashing context
 
+login_attempts = {}
+LOGIN_RATE_LIMIT = 5
+LOGIN_RATE_LIMIT_WINDOW = 5 * 60
+
 # Configuration for JWT (JSON Web Token)
 SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
 ALGORITHM = "HS256"
@@ -182,7 +186,24 @@ async def register(user: UserCreate):
 
 # API endpoint for user login
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = None):
+    client_ip = request.client.host if request else "unknown"
+    now_ts = datetime.datetime.now().timestamp()
+
+    if client_ip not in login_attempts:
+        login_attempts[client_ip] = []
+
+    login_attempts[client_ip] = [
+        ts for ts in login_attempts[client_ip]
+        if now_ts - ts < LOGIN_RATE_LIMIT_WINDOW
+    ]
+
+    if len(login_attempts[client_ip]) >= LOGIN_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Please try again later.",
+        )
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -194,7 +215,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         user = cursor.fetchone()
         # Verify user existence and password
         if not user or not pwd_context.verify(form_data.password, user["password_hash"]):
+            login_attempts[client_ip].append(now_ts)
             raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        login_attempts[client_ip] = []
         
         # Encode JWT token with user's email and username
         token = jwt.encode({
