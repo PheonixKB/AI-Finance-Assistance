@@ -28,7 +28,7 @@ class TestUploadFileSizeLimit:
             client = TestClient(app)
             large_content = b"x" * (11 * 1024 * 1024)
             response = client.post(
-                '/api/upload/transactions',
+                '/api/v1/upload/transactions',
                 files={"file": ("test.xlsx", BytesIO(large_content), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
             )
             assert response.status_code == 413
@@ -55,7 +55,7 @@ class TestUploadFileSizeLimit:
             client = TestClient(app)
             large_content = b"x" * (11 * 1024 * 1024)
             response = client.post(
-                '/api/upload/investments',
+                '/api/v1/upload/investments',
                 files={"file": ("test.pdf", BytesIO(large_content), "application/pdf")},
             )
             assert response.status_code == 413
@@ -85,7 +85,7 @@ class TestCSVUploadSupport:
             client = TestClient(app)
             csv_content = b"date,description,amount\n2024-01-01,Test,100.00\n"
             response = client.post(
-                '/api/upload/transactions?account_id=1',
+                '/api/v1/upload/transactions?account_id=1',
                 files={"file": ("test.csv", BytesIO(csv_content), "text/csv")},
             )
             assert response.status_code == 200
@@ -112,7 +112,7 @@ class TestCSVUploadSupport:
             client = TestClient(app)
             csv_content = b"name,investment_type,quantity,purchase_price,current_price,purchase_date\nStock,AAPL,10,150.00,160.00,2024-01-01\n"
             response = client.post(
-                '/api/upload/investments',
+                '/api/v1/upload/investments',
                 files={"file": ("test.csv", BytesIO(csv_content), "text/csv")},
             )
             assert response.status_code == 200

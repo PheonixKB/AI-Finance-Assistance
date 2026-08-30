@@ -41,7 +41,7 @@ class TestChatRoutes:
 
         client = TestClient(app)
         response = client.post(
-            '/api/chat/create_session',
+            '/api/v1/chat/create_session',
             json={"title": "New Chat"},
             headers={"Authorization": "Bearer fake-token"},
         )
@@ -71,7 +71,7 @@ class TestChatRoutes:
         from main import app
 
         client = TestClient(app)
-        response = client.get('/api/chat/messages/1')
+        response = client.get('/api/v1/chat/messages/1')
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
@@ -92,7 +92,7 @@ class TestChatRoutes:
         from main import app
 
         client = TestClient(app)
-        response = client.get('/api/chat/messages/1')
+        response = client.get('/api/v1/chat/messages/1')
         assert response.status_code == 404
 
     @patch('routes.chat_routes.get_current_user')
@@ -110,7 +110,7 @@ class TestChatRoutes:
 
         client = TestClient(app)
         response = client.post(
-            '/api/chat/add_message',
+            '/api/v1/chat/add_message',
             json={"session_id": 1, "sender": "user", "text": "hello"},
             headers={"Authorization": "Bearer fake-token"},
         )
@@ -129,5 +129,5 @@ class TestChatRoutes:
         from main import app
 
         client = TestClient(app)
-        response = client.get('/api/chat/sessions/victim', headers={"Authorization": "Bearer fake-token"})
+        response = client.get('/api/v1/chat/sessions/victim', headers={"Authorization": "Bearer fake-token"})
         assert response.status_code == 403

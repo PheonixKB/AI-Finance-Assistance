@@ -81,7 +81,7 @@ describe('apiService', () => {
         })
       );
       const { request } = await import('../apiService');
-      await expect(request('/api/test')).rejects.toThrow('Server error. Our team has been notified.');
+      await expect(request('/api/v1/test')).rejects.toThrow('Server error. Our team has been notified.');
     });
 
     it('maps 404 to generic message', async () => {
@@ -93,7 +93,7 @@ describe('apiService', () => {
         })
       );
       const { request } = await import('../apiService');
-      await expect(request('/api/test')).rejects.toThrow('The requested resource was not found.');
+      await expect(request('/api/v1/test')).rejects.toThrow('The requested resource was not found.');
     });
 
     it('preserves error status code', async () => {
@@ -106,7 +106,7 @@ describe('apiService', () => {
       );
       const { request } = await import('../apiService');
       try {
-        await request('/api/test');
+        await request('/api/v1/test');
       } catch (e) {
         expect(e.status).toBe(403);
       }

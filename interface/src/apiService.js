@@ -67,7 +67,7 @@ const auth = {
     const params = new URLSearchParams();
     params.append('username', email);
     params.append('password', password);
-    const response = await fetch(`${BASE_URL}/api/login`, {
+    const response = await fetch(`${BASE_URL}/api/v1/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params,
@@ -83,19 +83,19 @@ const auth = {
     return data;
   },
   register: async (username, email, password) => {
-    return request('/api/register', {
+    return request('/api/v1/register', {
       method: 'POST',
       body: { username, email, password },
     });
   },
   updateUser: async (username) => {
-    return request('/api/me', {
+    return request('/api/v1/me', {
       method: 'PUT',
       body: { username },
     });
   },
   deleteUser: async () => {
-    return request('/api/me', { method: 'DELETE' });
+    return request('/api/v1/me', { method: 'DELETE' });
   },
   logout: () => {
     localStorage.removeItem('token');
@@ -122,112 +122,112 @@ const auth = {
 };
 
 const chat = {
-  createSession: (title) => request('/api/chat/create_session', {
+  createSession: (title) => request('/api/v1/chat/create_session', {
     method: 'POST',
     body: { title: title || 'New Chat' },
   }),
-  addMessage: (session_id, sender, text) => request('/api/chat/add_message', {
+  addMessage: (session_id, sender, text) => request('/api/v1/chat/add_message', {
     method: 'POST',
     body: { session_id, sender, text },
   }),
-  getMessages: (session_id) => request(`/api/chat/messages/${session_id}`),
-  getSessions: (username) => request(`/api/chat/sessions/${username}`),
-  updateTitle: (session_id, title) => request(`/api/chat/sessions/${session_id}/title`, {
+  getMessages: (session_id) => request(`/api/v1/chat/messages/${session_id}`),
+  getSessions: (username) => request(`/api/v1/chat/sessions/${username}`),
+  updateTitle: (session_id, title) => request(`/api/v1/chat/sessions/${session_id}/title`, {
     method: 'PUT',
     body: { title },
   }),
-  deleteSession: (session_id) => request(`/api/chat/sessions/${session_id}`, {
+  deleteSession: (session_id) => request(`/api/v1/chat/sessions/${session_id}`, {
     method: 'DELETE',
   }),
 };
 
 const ai = {
-  ask: (query) => request('/api/ask', {
+  ask: (query) => request('/api/v1/ask', {
     method: 'POST',
     body: { query },
   }),
 };
 
 const permissions = {
-  get: () => request('/api/permissions/'),
-  update: (perms) => request('/api/permissions/', {
+  get: () => request('/api/v1/permissions/'),
+  update: (perms) => request('/api/v1/permissions/', {
     method: 'POST',
     body: perms,
   }),
 };
 
 const financeProfile = {
-  get: () => request('/api/finance_profile'),
-  create: (profile) => request('/api/finance_profile', {
+  get: () => request('/api/v1/finance_profile'),
+  create: (profile) => request('/api/v1/finance_profile', {
     method: 'POST',
     body: profile,
   }),
-  update: (profile) => request('/api/finance_profile', {
+  update: (profile) => request('/api/v1/finance_profile', {
     method: 'PUT',
     body: profile,
   }),
 };
 
 const summaryFinance = {
-  get: () => request('/api/summary_finance'),
-  update: (data) => request('/api/summary_finance', {
+  get: () => request('/api/v1/summary_finance'),
+  update: (data) => request('/api/v1/summary_finance', {
     method: 'PUT',
     body: data,
   }),
 };
 
 const accounts = {
-  getAll: () => request('/api/accounts'),
-  create: (account) => request('/api/accounts', {
+  getAll: () => request('/api/v1/accounts'),
+  create: (account) => request('/api/v1/accounts', {
     method: 'POST',
     body: account,
   }),
-  update: (id, account) => request(`/api/accounts/${id}`, {
+  update: (id, account) => request(`/api/v1/accounts/${id}`, {
     method: 'PUT',
     body: account,
   }),
-  delete: (id) => request(`/api/accounts/${id}`, { method: 'DELETE' }),
-  getTransactions: (account_id) => request(`/api/accounts/${account_id}/transactions`),
+  delete: (id) => request(`/api/v1/accounts/${id}`, { method: 'DELETE' }),
+  getTransactions: (account_id) => request(`/api/v1/accounts/${account_id}/transactions`),
 };
 
 const transactions = {
-  getAll: () => request('/api/transactions'),
-  create: (tx) => request('/api/transactions', {
+  getAll: () => request('/api/v1/transactions'),
+  create: (tx) => request('/api/v1/transactions', {
     method: 'POST',
     body: tx,
   }),
-  update: (id, tx) => request(`/api/transactions/${id}`, {
+  update: (id, tx) => request(`/api/v1/transactions/${id}`, {
     method: 'PUT',
     body: tx,
   }),
-  delete: (id) => request(`/api/transactions/${id}`, { method: 'DELETE' }),
+  delete: (id) => request(`/api/v1/transactions/${id}`, { method: 'DELETE' }),
 };
 
 const investments = {
-  getAll: () => request('/api/investments'),
-  create: (inv) => request('/api/investments', {
+  getAll: () => request('/api/v1/investments'),
+  create: (inv) => request('/api/v1/investments', {
     method: 'POST',
     body: inv,
   }),
-  update: (id, inv) => request(`/api/investments/${id}`, {
+  update: (id, inv) => request(`/api/v1/investments/${id}`, {
     method: 'PUT',
     body: inv,
   }),
-  delete: (id) => request(`/api/investments/${id}`, { method: 'DELETE' }),
+  delete: (id) => request(`/api/v1/investments/${id}`, { method: 'DELETE' }),
 };
 
 const goals = {
-  getAll: () => request('/api/goals'),
-  create: (goal) => request('/api/goals', {
+  getAll: () => request('/api/v1/goals'),
+  create: (goal) => request('/api/v1/goals', {
     method: 'POST',
     body: goal,
   }),
-  update: (id, goal) => request(`/api/goals/${id}`, {
+  update: (id, goal) => request(`/api/v1/goals/${id}`, {
     method: 'PUT',
     body: goal,
   }),
-  delete: (id) => request(`/api/goals/${id}`, { method: 'DELETE' }),
-  getProgress: (id) => request(`/api/goal-progress/${id}`),
+  delete: (id) => request(`/api/v1/goals/${id}`, { method: 'DELETE' }),
+  getProgress: (id) => request(`/api/v1/goal-progress/${id}`),
 };
 
 const upload = {
@@ -242,7 +242,7 @@ const upload = {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${BASE_URL}/api/upload/transactions`, {
+    const response = await fetch(`${BASE_URL}/api/v1/upload/transactions`, {
       method: 'POST',
       headers,
       body: formData,
@@ -268,7 +268,7 @@ const upload = {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${BASE_URL}/api/upload/investments`, {
+    const response = await fetch(`${BASE_URL}/api/v1/upload/investments`, {
       method: 'POST',
       headers,
       body: formData,
@@ -289,11 +289,11 @@ const upload = {
 };
 
 const content = {
-  getStats: () => request('/api/stats'),
-  getTestimonials: () => request('/api/testimonials'),
-  getFinanceSummary: () => request('/api/finance-summary'),
-  getBudgetSummary: () => request('/api/budget-summary'),
-  getInvestmentInsights: () => request('/api/investment-insights'),
+  getStats: () => request('/api/v1/stats'),
+  getTestimonials: () => request('/api/v1/testimonials'),
+  getFinanceSummary: () => request('/api/v1/finance-summary'),
+  getBudgetSummary: () => request('/api/v1/budget-summary'),
+  getInvestmentInsights: () => request('/api/v1/investment-insights'),
 };
 
 export {

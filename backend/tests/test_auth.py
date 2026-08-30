@@ -93,13 +93,13 @@ class TestAuthGuard:
 
             for _ in range(5):
                 response = client.post(
-                    '/api/login',
+                    '/api/v1/login',
                     data={"username": "test@test.com", "password": "wrong"},
                 )
                 assert response.status_code == 401
 
             response = client.post(
-                '/api/login',
+                '/api/v1/login',
                 data={"username": "test@test.com", "password": "wrong"},
             )
             assert response.status_code == 429

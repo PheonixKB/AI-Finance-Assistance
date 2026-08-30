@@ -15,7 +15,7 @@ class TestAIMockFallback:
         from main import app
 
         client = TestClient(app)
-        response = client.post('/api/ask', json={"query": "What is my credit score?"})
+        response = client.post('/api/v1/ask', json={"query": "What is my credit score?"})
         assert response.status_code == 200
         data = response.json()
         assert "answer" in data

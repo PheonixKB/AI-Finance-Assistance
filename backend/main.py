@@ -33,11 +33,11 @@ app.add_middleware(
 )
 
 # Include API routers into the main application
-# Each router handles a specific set of endpoints, prefixed with "/api".
-app.include_router(user_router, prefix="/api")        # Routes for user authentication and management
-app.include_router(chat_router, prefix="/api")        # Routes for chat functionalities
-app.include_router(ai_router, prefix="/api")          # Routes for AI-related operations
-app.include_router(upload_router, prefix="/api")      # Routes for data upload functionalities
-app.include_router(content_router, prefix="/api")     # Routes for general content and finance data
-app.include_router(permissions_router, prefix="/api")  # Routes for managing user permissions
-app.include_router(finance_router, prefix="/api")    # Routes for finance data retrieval
+# Each router handles a specific set of endpoints, prefixed with "/api/v1".
+app.include_router(user_router, prefix="/api/v1")        # Routes for user authentication and management
+app.include_router(chat_router, prefix="/api/v1")        # Routes for chat functionalities
+app.include_router(ai_router, prefix="/api/v1")          # Routes for AI-related operations
+app.include_router(upload_router, prefix="/api/v1")      # Routes for data upload functionalities
+app.include_router(content_router, prefix="/api/v1")     # Routes for general content and finance data
+app.include_router(permissions_router, prefix="/api/v1")  # Routes for managing user permissions
+app.include_router(finance_router, prefix="/api/v1")    # Routes for finance data retrieval
