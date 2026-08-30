@@ -23,16 +23,16 @@ Each ticket is a discrete, actionable task. When picking up work:
 
 | Ticket ID | Title | Priority | Dependencies | Acceptance Criteria | Files to Modify | Done | Updated |
 |-----------|-------|----------|--------------|---------------------|-----------------|------|---------|
-| FEA-0.1 | Connect AI Chat to Backend | P0 | apiService.js | User sends message → real `/api/ask` response → message persists after refresh | `interface/src/pages/AIChat.jsx`, `interface/src/apiService.js` | [ ] | |
-| FEA-0.2 | Wire Up Permission Toggle | P0 | FEA-0.1 (apiService) | Toggle permission → refresh → state persists | `interface/src/pages/Profile.jsx`, `backend/permissions.py` | [ ] | |
+| FEA-0.1 | Connect AI Chat to Backend | P0 | apiService.js | User sends message → real `/api/ask` response → message persists after refresh | `interface/src/pages/AIChat.jsx`, `interface/src/apiService.js` | [x] | 2026-08-30 |
+| FEA-0.2 | Wire Up Permission Toggle | P0 | FEA-0.1 (apiService) | Toggle permission → refresh → state persists | `interface/src/pages/Profile.jsx`, `backend/permissions.py` | [x] | 2026-08-30 |
 | FEA-0.3 | Fix Chat Route Authorization Bypass | P0 | FEA-0.1 | User A cannot read/write/delete User B's chat sessions | `backend/routes/chat_routes.py` | [x] | 2026-08-30 |
-| FEA-0.4 | Add JWT Expiration | P0 | — | Token expires after 15 min; client redirects to login | `backend/users.py`, `interface/src/apiService.js`, `interface/src/components/AuthGuard.jsx` | [ ] | |
-| FEA-0.5 | Replace Hardcoded API URLs | P1 | apiService.js | No `http://localhost:8000` strings remain in frontend code | All `interface/src/pages/*.jsx`, `interface/src/components/*.jsx` | [ ] | |
-| FEA-0.6 | Fix Duplicate Routes in App.jsx | P1 | — | Each route defined exactly once | `interface/src/App.jsx` | [ ] | |
-| FEA-0.7 | Create Missing Feature Pages | P0 | FEA-0.1 | All 5 routes resolve to pages with real data | `interface/src/App.jsx`, `InvestmentInsights.jsx`, `GoalTracking.jsx`, `ExpenseOptimization.jsx`, `BillManagement.jsx`, `WealthAnalytics.jsx` | [ ] | |
-| FEA-0.8 | Fix deleteInvestment Reference Error | P0 | — | Delete button works without console error | `interface/src/pages/FinanceData.jsx` | [ ] | |
-| FEA-0.9 | Add Login Rate Limiting | P0 | — | 5 failed attempts → 60s cooldown | `backend/users.py` | [ ] | |
-| FEA-0.10 | Add File Size Limits on Uploads | P0 | — | Files > 10MB rejected with 413 | `backend/routes/upload_routes.py` | [ ] | |
+| FEA-0.4 | Add JWT Expiration | P0 | — | Token expires after 15 min; client redirects to login | `backend/users.py`, `interface/src/apiService.js`, `interface/src/components/AuthGuard.jsx` | [x] | 2026-08-30 |
+| FEA-0.5 | Replace Hardcoded API URLs | P1 | apiService.js | No `http://localhost:8000` strings remain in frontend code | All `interface/src/pages/*.jsx`, `interface/src/components/*.jsx` | [x] | 2026-08-30 |
+| FEA-0.6 | Fix Duplicate Routes in App.jsx | P1 | — | Each route defined exactly once | `interface/src/App.jsx` | [x] | 2026-08-30 |
+| FEA-0.7 | Create Missing Feature Pages | P0 | FEA-0.1 | All 5 routes resolve to pages with real data | `interface/src/App.jsx`, `InvestmentInsights.jsx`, `GoalTracking.jsx`, `ExpenseOptimization.jsx`, `BillManagement.jsx`, `WealthAnalytics.jsx` | [x] | 2026-08-30 |
+| FEA-0.8 | Fix deleteInvestment Reference Error | P0 | — | Delete button works without console error | `interface/src/pages/FinanceData.jsx` | [x] | 2026-08-30 |
+| FEA-0.9 | Add Login Rate Limiting | P0 | — | 5 failed attempts → 60s cooldown | `backend/users.py` | [x] | 2026-08-30 |
+| FEA-0.10 | Add File Size Limits on Uploads | P0 | — | Files > 10MB rejected with 413 | `backend/routes/upload_routes.py` | [x] | 2026-08-30 |
 
 ### FEA-0.1 Sub-tasks
 
@@ -60,10 +60,10 @@ Each ticket is a discrete, actionable task. When picking up work:
 
 | ID | Task | Description | Done |
 |----|------|-------------|------|
-| FEA-0.4.1 | Add `exp` claim to token encoding | Set `exp = datetime.now(timezone.utc) + timedelta(minutes=15)` in `create_access_token` | [ ] |
-| FEA-0.4.2 | Verify `exp` in `get_current_user` | Raise 401 if token expired | [ ] |
-| FEA-0.4.3 | Handle 401 in frontend | Catch 401 in `apiService.js` → clear token → redirect to `/signin` | [ ] |
-| FEA-0.4.4 | Update AuthGuard | Check token expiry before allowing access | [ ] |
+| FEA-0.4.1 | Add `exp` claim to token encoding | Set `exp = datetime.now(timezone.utc) + timedelta(minutes=15)` in `create_access_token` | [x] | 2026-08-30 |
+| FEA-0.4.2 | Verify `exp` in `get_current_user` | Raise 401 if token expired | [x] | 2026-08-30 |
+| FEA-0.4.3 | Handle 401 in frontend | Catch 401 in `apiService.js` → clear token → redirect to `/signin` | [x] | 2026-08-30 |
+| FEA-0.4.4 | Update AuthGuard | Check token expiry before allowing access | [x] | 2026-08-30 |
 
 ---
 
