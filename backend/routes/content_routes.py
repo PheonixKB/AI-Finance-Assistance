@@ -7,7 +7,7 @@ from openai import RateLimitError
 
 from users import get_current_user
 from db import get_db_connection
-from ai import openai_client
+from ai import get_openai_client
 
 router = APIRouter()
 
@@ -476,6 +476,9 @@ async def get_budget_summary(request: Request):
             """
 
             try:
+                openai_client = get_openai_client()
+                if openai_client is None:
+                    raise HTTPException(status_code=503, detail="OpenAI API key not configured")
                 response = openai_client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
@@ -549,6 +552,9 @@ async def get_investment_insights(request: Request):
         Provide actionable advice and potential investment types.
         """
 
+        openai_client = get_openai_client()
+        if openai_client is None:
+            raise HTTPException(status_code=503, detail="OpenAI API key not configured")
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -696,6 +702,9 @@ async def get_goal_progress(goal_id: int, request: Request):
         """
 
         try:
+            openai_client = get_openai_client()
+            if openai_client is None:
+                raise HTTPException(status_code=503, detail="OpenAI API key not configured")
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[

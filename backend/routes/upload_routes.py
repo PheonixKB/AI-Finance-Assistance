@@ -6,7 +6,7 @@ import io
 from db import get_db_connection
 from users import get_current_user
 import datetime
-from ai import openai_client
+from ai import get_openai_client
 
 router = APIRouter(prefix="/upload", tags=["Upload"])
 
@@ -103,7 +103,9 @@ async def upload_transactions(
 
                 # Use OpenAI to categorize the transaction
                 prompt = f"Categorize this transaction: '{description}' into one of these: Food, Housing, Transportation, Utilities, Entertainment, Others."
-                response = openai_client.chat.completions.create(
+                client = get_openai_client()
+                if client:
+                    response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant that categorizes financial transactions."},

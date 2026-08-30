@@ -12,7 +12,7 @@ class PermissionsModel(BaseModel):
     transactions: bool
     investments: bool
     epf: bool
-    creditScore: bool
+    credit_score: bool
 
 def get_user_permissions(user_id: int):
     conn = get_db_connection()
@@ -23,12 +23,13 @@ def get_user_permissions(user_id: int):
     conn.close()
     if not permissions:
         return {
+            "user_id": user_id,
             "assets": True,
             "liabilities": True,
             "transactions": True,
             "investments": True,
             "epf": True,
-            "creditScore": True,
+            "credit_score": True,
         }
     return permissions
 
@@ -42,7 +43,7 @@ def update_permissions(permissions: PermissionsModel, current_user: dict = Depen
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            REPLACE INTO user_permissions (user_id, assets, liabilities, transactions, investments, epf, creditScore)
+            REPLACE INTO user_permissions (user_id, assets, liabilities, transactions, investments, epf, credit_score)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (
             current_user["id"],
@@ -51,7 +52,30 @@ def update_permissions(permissions: PermissionsModel, current_user: dict = Depen
             permissions.transactions,
             permissions.investments,
             permissions.epf,
-            permissions.creditScore
+            permissions.credit_score
+        ))
+        conn.commit()
+        return {"message": "Permissions updated successfully"}
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.put("/")
+def update_permissions_put(permissions: PermissionsModel, current_user: dict = Depends(get_current_user)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            REPLACE INTO user_permissions (user_id, assets, liabilities, transactions, investments, epf, credit_score)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            current_user["id"],
+            permissions.assets,
+            permissions.liabilities,
+            permissions.transactions,
+            permissions.investments,
+            permissions.epf,
+            permissions.credit_score
         ))
         conn.commit()
         return {"message": "Permissions updated successfully"}
