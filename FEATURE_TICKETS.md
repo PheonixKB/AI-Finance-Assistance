@@ -25,7 +25,7 @@ Each ticket is a discrete, actionable task. When picking up work:
 |-----------|-------|----------|--------------|---------------------|-----------------|------|---------|
 | FEA-0.1 | Connect AI Chat to Backend | P0 | apiService.js | User sends message → real `/api/ask` response → message persists after refresh | `interface/src/pages/AIChat.jsx`, `interface/src/apiService.js` | [ ] | |
 | FEA-0.2 | Wire Up Permission Toggle | P0 | FEA-0.1 (apiService) | Toggle permission → refresh → state persists | `interface/src/pages/Profile.jsx`, `backend/permissions.py` | [ ] | |
-| FEA-0.3 | Fix Chat Route Authorization Bypass | P0 | FEA-0.1 | User A cannot read/write/delete User B's chat sessions | `backend/routes/chat_routes.py` | [ ] | |
+| FEA-0.3 | Fix Chat Route Authorization Bypass | P0 | FEA-0.1 | User A cannot read/write/delete User B's chat sessions | `backend/routes/chat_routes.py` | [x] | 2026-08-30 |
 | FEA-0.4 | Add JWT Expiration | P0 | — | Token expires after 15 min; client redirects to login | `backend/users.py`, `interface/src/apiService.js`, `interface/src/components/AuthGuard.jsx` | [ ] | |
 | FEA-0.5 | Replace Hardcoded API URLs | P1 | apiService.js | No `http://localhost:8000` strings remain in frontend code | All `interface/src/pages/*.jsx`, `interface/src/components/*.jsx` | [ ] | |
 | FEA-0.6 | Fix Duplicate Routes in App.jsx | P1 | — | Each route defined exactly once | `interface/src/App.jsx` | [ ] | |

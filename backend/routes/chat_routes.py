@@ -26,15 +26,17 @@ def create_chat_session(payload: CreateChatSession, request: Request):
 
 # Add message
 @router.post("/add_message")
-def add_message(payload: AddMessage):
+def add_message(payload: AddMessage, request: Request):
+    current_user = get_current_user(request)
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT id FROM chat_sessions WHERE id = %s", (payload.session_id,)
+            "SELECT id FROM chat_sessions WHERE id = %s AND user_id = %s",
+            (payload.session_id, current_user["id"])
         )
         if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Session not found")
+            raise HTTPException(status_code=404, detail="Session not found or permission denied")
 
         cursor.execute(
             "INSERT INTO chat_messages (session_id, sender, text, created_at) VALUES (%s, %s, %s, NOW())",
@@ -48,10 +50,18 @@ def add_message(payload: AddMessage):
 
 # Fetch messages
 @router.get("/messages/{session_id}")
-def get_session_messages(session_id: int):
+def get_session_messages(session_id: int, request: Request):
+    current_user = get_current_user(request)
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
+        cursor.execute(
+            "SELECT id FROM chat_sessions WHERE id = %s AND user_id = %s",
+            (session_id, current_user["id"])
+        )
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Session not found or permission denied")
+
         cursor.execute(
             "SELECT sender, text, created_at FROM chat_messages WHERE session_id = %s ORDER BY created_at ASC",
             (session_id,)
@@ -63,7 +73,10 @@ def get_session_messages(session_id: int):
 
 # Fetch sessions by username
 @router.get("/sessions/{username}")
-def get_user_sessions_by_username(username: str):
+def get_user_sessions_by_username(username: str, request: Request):
+    current_user = get_current_user(request)
+    if username != current_user["username"]:
+        raise HTTPException(status_code=403, detail="You can only view your own sessions")
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:

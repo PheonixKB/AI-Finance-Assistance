@@ -50,16 +50,22 @@ class TestChatRoutes:
         assert data["id"] == 42
         assert data["title"] == "New Chat"
 
+    @patch('routes.chat_routes.get_current_user')
     @patch('routes.chat_routes.get_db_connection')
-    def test_get_session_messages_returns_list(self, mock_get_conn):
+    def test_get_session_messages_returns_list(self, mock_get_conn, mock_get_user):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [
             {"sender": "user", "text": "Hello", "created_at": "2024-01-01T00:00:00"},
             {"sender": "ai", "text": "Hi there!", "created_at": "2024-01-01T00:01:00"},
         ]
+        mock_cursor.fetchone.side_effect = [
+            {"id": 1},
+            None,
+        ]
         mock_conn.cursor.return_value = mock_cursor
         mock_get_conn.return_value = mock_conn
+        mock_get_user.return_value = {"id": 1, "email": "test@test.com", "username": "test"}
 
         from fastapi.testclient import TestClient
         from main import app
@@ -71,3 +77,57 @@ class TestChatRoutes:
         assert len(data) == 2
         assert data[0]["sender"] == "user"
         assert data[1]["sender"] == "ai"
+
+    @patch('routes.chat_routes.get_current_user')
+    @patch('routes.chat_routes.get_db_connection')
+    def test_get_session_messages_denies_other_user(self, mock_get_conn, mock_get_user):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+        mock_get_user.return_value = {"id": 1, "email": "test@test.com", "username": "test"}
+
+        from fastapi.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        response = client.get('/api/chat/messages/1')
+        assert response.status_code == 404
+
+    @patch('routes.chat_routes.get_current_user')
+    @patch('routes.chat_routes.get_db_connection')
+    def test_add_message_denies_other_user_session(self, mock_get_conn, mock_get_user):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+        mock_get_user.return_value = {"id": 1, "email": "test@test.com", "username": "test"}
+
+        from fastapi.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        response = client.post(
+            '/api/chat/add_message',
+            json={"session_id": 1, "sender": "user", "text": "hello"},
+            headers={"Authorization": "Bearer fake-token"},
+        )
+        assert response.status_code == 404
+
+    @patch('routes.chat_routes.get_current_user')
+    @patch('routes.chat_routes.get_db_connection')
+    def test_get_user_sessions_denies_other_username(self, mock_get_conn, mock_get_user):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+        mock_get_user.return_value = {"id": 1, "email": "test@test.com", "username": "attacker"}
+
+        from fastapi.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        response = client.get('/api/chat/sessions/victim', headers={"Authorization": "Bearer fake-token"})
+        assert response.status_code == 403
