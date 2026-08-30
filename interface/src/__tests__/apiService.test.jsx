@@ -58,5 +58,12 @@ describe('apiService', () => {
       expect(decoded.username).toBe('testuser');
       expect(decoded.sub).toBe('test@example.com');
     });
+
+    it('detects expired token', async () => {
+      const expiredToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAwfQ.expired';
+      localStorage.setItem('token', expiredToken);
+      const { auth } = await import('../apiService');
+      expect(auth.isAuthenticated()).toBe(false);
+    });
   });
 });

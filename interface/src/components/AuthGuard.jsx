@@ -1,21 +1,25 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom'; // Navigate component for redirection
+import { Navigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
-/**
- * AuthGuard component is a higher-order component (HOC) used to protect routes.
- * It checks if a user is authenticated by looking for a JWT token in local storage.
- * If no token is found, it redirects the user to the sign-in page.
- */
 const AuthGuard = ({ children }) => {
-  const token = localStorage.getItem('token'); // Retrieve the authentication token
+  const token = localStorage.getItem('token');
 
-  // If no token is found, the user is not authenticated
   if (!token) {
-    // Redirect to the sign-in page, replacing the current history entry
     return <Navigate to="/signin" replace />;
   }
 
-  // If authenticated, render the children components (the protected route's content)
+  try {
+    const decoded = jwtDecode(token);
+    if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+      localStorage.removeItem('token');
+      return <Navigate to="/signin" replace />;
+    }
+  } catch {
+    localStorage.removeItem('token');
+    return <Navigate to="/signin" replace />;
+  }
+
   return children;
 };
 

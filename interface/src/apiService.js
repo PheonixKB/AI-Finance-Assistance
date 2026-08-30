@@ -28,6 +28,10 @@ const request = async (path, options = {}) => {
   }
   const response = await fetch(url, config);
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/signin';
+    }
     let errorData;
     try {
       errorData = await response.json();

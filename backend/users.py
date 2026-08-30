@@ -23,8 +23,9 @@ router = APIRouter() # Initialize FastAPI router for user-related routes
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # Password hashing context
 
 # Configuration for JWT (JSON Web Token)
-SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32)) # Secret key for JWT encoding/decoding
-ALGORITHM = "HS256" # Algorithm used for JWT signing
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
 # Configuration for SendGrid email service
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
@@ -90,7 +91,11 @@ async def update_user_me(user_update: UserUpdate, current_user: dict = Depends(g
         conn.commit()
 
         # Re-encode JWT token with the updated username
-        new_token = jwt.encode({"sub": current_user["email"], "username": user_update.username}, SECRET_KEY, algorithm=ALGORITHM)
+        new_token = jwt.encode({
+            "sub": current_user["email"],
+            "username": user_update.username,
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        }, SECRET_KEY, algorithm=ALGORITHM)
 
         # Return the updated user information and the new token
         return {"message": "Username updated successfully", "username": user_update.username, "access_token": new_token, "token_type": "bearer"}
@@ -164,7 +169,11 @@ async def register(user: UserCreate):
         await send_welcome_email(user.email, user.username)
 
         # Encode JWT token with user's email and username
-        token = jwt.encode({"sub": user.email, "username": user.username}, SECRET_KEY, algorithm=ALGORITHM)
+        token = jwt.encode({
+            "sub": user.email,
+            "username": user.username,
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        }, SECRET_KEY, algorithm=ALGORITHM)
 
         return {"message": "registered", "email": user.email, "username": user.username, "access_token": token, "token_type": "bearer"}
     finally:
@@ -188,7 +197,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
         # Encode JWT token with user's email and username
-        token = jwt.encode({"sub": user["email"], "username": user["username"]}, SECRET_KEY, algorithm=ALGORITHM)
+        token = jwt.encode({
+            "sub": user["email"],
+            "username": user["username"],
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        }, SECRET_KEY, algorithm=ALGORITHM)
         return {"access_token": token, "token_type": "bearer"}
     finally:
         cursor.close()

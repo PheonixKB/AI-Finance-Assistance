@@ -5,6 +5,7 @@ Run: pytest tests/test_auth.py -v
 import pytest
 from jose import jwt
 import os
+import datetime
 
 
 class TestJWT:
@@ -56,3 +57,22 @@ class TestAuthGuard:
             result = get_current_user(request)
             assert result is not None
             assert result["username"] == "testuser"
+
+    def test_expired_token_returns_none(self):
+        secret = os.environ.get('SECRET_KEY', 'test-secret-key-for-testing')
+        expired_payload = {
+            "sub": "test@example.com",
+            "username": "testuser",
+            "exp": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=1)
+        }
+        token = jwt.encode(expired_payload, secret, algorithm="HS256")
+
+        from users import get_current_user
+        from unittest.mock import MagicMock
+
+        request = MagicMock()
+        request.headers = {"Authorization": f"Bearer {token}"}
+        request.client.host = "127.0.0.1"
+
+        result = get_current_user(request)
+        assert result is None
