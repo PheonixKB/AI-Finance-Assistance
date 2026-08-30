@@ -1,45 +1,51 @@
-// interface/src/pages/AllInvestments.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Brain, ArrowLeft } from 'lucide-react';
-import { jwtDecode } from 'jwt-decode';
+import { Brain, ArrowLeft, Trash2, Loader } from 'lucide-react';
+import { auth, investments } from '../apiService';
 
 const AllInvestments = () => {
   const [username, setUsername] = useState('');
-  const [investments, setInvestments] = useState([]);
+  const [investmentList, setInvestmentList] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const fetchInvestments = async (token) => {
+  const fetchInvestments = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/investments', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch investments');
-      const data = await response.json();
-      setInvestments(data);
+      const data = await investments.getAll();
+      setInvestmentList(data);
     } catch (error) {
-      console.error("Error fetching investments:", error);
+      console.error('Error fetching investments:', error);
       setMessage({ type: 'error', text: error.message });
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        setUsername(decodedToken.username || 'User');
-        fetchInvestments(token);
-      } catch (error) {
-        console.error("Error decoding token:", error);
-        localStorage.removeItem('token');
-        navigate('/signin');
-      }
-    } else {
+    if (!token) {
       navigate('/signin');
+      return;
     }
+    const decodedToken = auth.decodeToken();
+    if (!decodedToken) {
+      localStorage.removeItem('token');
+      navigate('/signin');
+      return;
+    }
+    setUsername(decodedToken.username || 'User');
+    fetchInvestments();
   }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12">
+        <Loader className="w-8 h-8 text-white animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12 px-4 sm:px-6 lg:px-8">
@@ -57,13 +63,13 @@ const AllInvestments = () => {
               <p className="text-xs text-gray-600">Smart Financial Assistant</p>
             </div>
           </div>
-          <div className="w-20"></div> {/* Spacer */}
+          <div className="w-20"></div>
         </div>
       </header>
 
       <div className="max-w-4xl w-full space-y-8 p-10 glass-effect rounded-xl shadow-lg z-10 mt-20">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-white">All Investments for {username}</h2>
-        
+
         {message.text && (
           <div className={`p-3 rounded-md text-center ${message.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
             {message.text}
@@ -71,7 +77,7 @@ const AllInvestments = () => {
         )}
 
         <div className="space-y-4">
-          {investments.map((inv) => (
+          {investmentList.map((inv) => (
             <div key={inv.id} className="bg-white/10 p-4 rounded-lg flex justify-between items-center">
               <div>
                 <p className="text-white font-semibold">{inv.name} ({inv.investment_type})</p>

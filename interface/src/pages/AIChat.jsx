@@ -1,260 +1,196 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, Plus, User, LogOut, MessageSquare, Trash2, Edit } from 'lucide-react'; // Importing icons for UI elements
-import { useNavigate } from 'react-router-dom'; // Hook for programmatic navigation
-import { jwtDecode } from 'jwt-decode'; // Library to decode JWT tokens
+import { Brain, Plus, User, LogOut, MessageSquare, Trash2, Edit, Send, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import apiService, { chat, ai } from '../apiService';
 
-/**
- * AIChat component provides the main interface for users to interact with the AI financial assistant.
- * It includes a side menu for navigation and user profile, and a main chat area for conversations.
- */
 const AIChat = () => {
-  // State variables for managing chat messages, user input, and the logged-in username
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [username, setUsername] = useState('Guest'); // Default username
-  const [sessionId, setSessionId] = useState(null); // State to store the current chat session ID
-  const [chatSessions, setChatSessions] = useState([]); // State to store list of chat sessions
-  const [currentChatTitle, setCurrentChatTitle] = useState("New Chat"); // State to store the title of the current chat
-  const [isEditingTitle, setIsEditingTitle] = useState(null); // State to track which session title is being edited
-  const [editedTitle, setEditedTitle] = useState(''); // State to store the value of the edited title
-  const navigate = useNavigate(); // Hook for programmatic navigation
-  const initialLoadRef = useRef(true); // Ref to track initial component load
+  const [username, setUsername] = useState('Guest');
+  const [sessionId, setSessionId] = useState(null);
+  const [chatSessions, setChatSessions] = useState([]);
+  const [currentChatTitle, setCurrentChatTitle] = useState('New Chat');
+  const [isEditingTitle, setIsEditingTitle] = useState(null);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const initialLoadRef = useRef(true);
+  const messagesEndRef = useRef(null);
 
-  // Function to fetch chat sessions for the current user
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const fetchChatSessions = async (user) => {
-    const token = localStorage.getItem('token');
-    if (!token || !user) return;
-
+    if (!apiService.auth.isAuthenticated() || !user) return;
     try {
-      const response = await fetch(`http://localhost:8000/api/chat/sessions/${user}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch chat sessions');
-      }
-
-      const sessions = await response.json();
+      const sessions = await chat.getSessions(user);
       setChatSessions(sessions);
-      // If there are sessions and no current session is set, load the latest one
       if (sessions.length > 0 && !sessionId) {
         handleSessionClick(sessions[0].id, sessions[0].title);
-      } else if (sessions.length === 0 && !sessionId && initialLoadRef.current) {
-        // If no sessions exist and it's the initial load, create a new one
+      } else if (sessions.length === 0 && initialLoadRef.current) {
         handleNewChat();
       }
-    } catch (error) {
-      console.error("Error fetching chat sessions:", error);
+    } catch (err) {
+      console.error('Error fetching chat sessions:', err);
+      setError(err.message || 'Failed to fetch sessions');
     }
   };
 
-  // Function to fetch messages for a specific session
   const fetchSessionMessages = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      const response = await fetch(`http://localhost:8000/api/chat/messages/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch session messages');
-      }
-
-      const messagesData = await response.json();
-      setMessages(messagesData.map(msg => ({ sender: msg.sender, text: msg.text })));
-    } catch (error) {
-      console.error("Error fetching session messages:", error);
+      const messagesData = await chat.getMessages(id);
+      setMessages(messagesData.map((msg) => ({ sender: msg.sender, text: msg.text })));
+    } catch (err) {
+      console.error('Error fetching session messages:', err);
+      setError(err.message || 'Failed to fetch messages');
     }
   };
 
-  // Effect hook to check authentication status and extract username from JWT on component mount
   useEffect(() => {
-    const token = localStorage.getItem('token'); // Retrieve JWT token from local storage
+    const token = localStorage.getItem('token');
     if (token) {
       try {
-        const decodedToken = jwtDecode(token);
-        const user = decodedToken.username || 'User';
+        const decodedToken = apiService.auth.decodeToken();
+        const user = decodedToken?.username || 'User';
         setUsername(user);
-        fetchChatSessions(user); // Fetch chat sessions for the logged-in user
-
-        initialLoadRef.current = false; // Mark initial load as complete
-      } catch (error) {
-        console.error("Error decoding token:", error); // Log any token decoding errors
-        localStorage.removeItem('token'); // Remove invalid token
-        navigate('/signin'); // Redirect to sign-in page
+        initialLoadRef.current = false;
+        fetchChatSessions(user);
+      } catch (err) {
+        console.error('Error decoding token:', err);
+        localStorage.removeItem('token');
+        navigate('/signin');
       }
     } else {
-      navigate('/signin'); // Redirect to sign-in if no token is found
+      navigate('/signin');
     }
-  }, [navigate, sessionId, username]); // Dependency array ensures effect runs only when navigate, sessionId or username changes
+  }, [navigate]);
 
-  /**
-   * Handles sending a new message from the user.
-   * Adds the user's message to the chat, clears the input, and simulates an AI response.
-   */
-  const handleSendMessage = () => {
-    if (input.trim() === '') return; // Prevent sending empty messages
+  const handleSendMessage = async () => {
+    if (input.trim() === '') return;
+    if (!sessionId) {
+      setError('No active chat session. Please start a new chat.');
+      return;
+    }
 
-    const newMessage = { sender: 'user', text: input };
-    setMessages([...messages, newMessage]); // Add user's message to chat history
-    setInput(''); // Clear the input field
+    const userMessage = { sender: 'user', text: input };
+    const currentInput = input;
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    setError('');
 
-    // TODO: Integrate with backend AI API to get actual responses
-    // Simulate an AI response after a short delay
-    setTimeout(() => {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: 'ai', text: `Hello! You said: "${input}"` },
+    try {
+      await chat.addMessage(sessionId, 'user', currentInput);
+
+      const response = await ai.ask(currentInput);
+      const aiText = response.answer || '[No response from AI]';
+      setMessages((prev) => [...prev, { sender: 'ai', text: aiText }]);
+
+      await chat.addMessage(sessionId, 'ai', aiText);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setError(err.message || 'Failed to get AI response');
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'ai', text: 'Sorry, I encountered an error. Please try again.' },
       ]);
-    }, 1000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  /**
-   * Handles initiating a new chat session.
-   * Clears all current messages and the input field.
-   */
   const handleNewChat = async () => {
-    console.log("New Chat button clicked!"); // Log for debugging purposes
-    setMessages([]); // Clear all messages
-    setInput(''); // Clear the input field
-    setCurrentChatTitle("New Chat"); // Reset title for new chat
+    setMessages([]);
+    setInput('');
+    setCurrentChatTitle('New Chat');
+    setError('');
 
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!apiService.auth.isAuthenticated()) {
       navigate('/signin');
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat/create_session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title: "New Chat" }), // Provide a default title
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create new chat session');
-      }
-
-      const data = await response.json();
-      setSessionId(data.id); // Store the new session ID
-      console.log("New session created with ID:", data.id);
-      fetchChatSessions(username); // Refresh the list of chat sessions
-    } catch (error) {
-      console.error("Error creating new chat session:", error);
-      // Optionally display an error message to the user
+      const data = await chat.createSession('New Chat');
+      setSessionId(data.id);
+      fetchChatSessions(username);
+    } catch (err) {
+      console.error('Error creating new chat session:', err);
+      setError(err.message || 'Failed to create new chat');
     }
   };
 
-  // Handles clicking on a past chat session to load its messages
   const handleSessionClick = (id, title) => {
     setSessionId(id);
     setCurrentChatTitle(title);
-    fetchSessionMessages(id);
-    setMessages([]); // Clear current messages before loading new ones
+    setMessages([]);
     setInput('');
+    setError('');
+    fetchSessionMessages(id);
   };
 
-  // Handles deleting a chat session
   const handleDeleteSession = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!apiService.auth.isAuthenticated()) {
       navigate('/signin');
       return;
     }
 
-    if (!window.confirm("Are you sure you want to delete this chat session?")) {
+    if (!window.confirm('Are you sure you want to delete this chat session?')) {
       return;
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/chat/sessions/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete chat session');
-      }
-
-      console.log("Session deleted with ID:", id);
-      fetchChatSessions(username); // Refresh the list of chat sessions
-      // If the deleted session was the current one, create a new default session
+      await chat.deleteSession(id);
       if (sessionId === id) {
         handleNewChat();
+      } else {
+        fetchChatSessions(username);
       }
-    } catch (error) {
-      console.error("Error deleting chat session:", error);
-      // Optionally display an error message to the user
+    } catch (err) {
+      console.error('Error deleting chat session:', err);
+      setError(err.message || 'Failed to delete session');
     }
   };
 
-  // Handles editing a chat session title
   const handleEditTitle = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!apiService.auth.isAuthenticated()) {
       navigate('/signin');
       return;
     }
 
     if (editedTitle.trim() === '') {
-      alert("Chat title cannot be empty.");
+      alert('Chat title cannot be empty.');
       return;
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/chat/sessions/${id}/title`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title: editedTitle }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update chat title');
-      }
-
-      console.log("Session title updated for ID:", id);
-      setIsEditingTitle(null); // Exit editing mode
-      fetchChatSessions(username); // Refresh the list of chat sessions
+      await chat.updateTitle(id, editedTitle);
+      setIsEditingTitle(null);
+      fetchChatSessions(username);
       if (sessionId === id) {
         setCurrentChatTitle(editedTitle);
       }
-    } catch (error) {
-      console.error("Error updating chat title:", error);
-      // Optionally display an error message to the user
+    } catch (err) {
+      console.error('Error updating chat title:', err);
+      setError(err.message || 'Failed to update title');
     }
   };
 
-  /**
-   * Handles user logout.
-   * Removes the JWT token from local storage and redirects to the home page.
-   */
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Remove authentication token
-    navigate('/'); // Redirect to the home page
+    apiService.auth.logout();
+    navigate('/');
   };
 
   return (
-    // Main container for the chat interface with a gradient background and flex layout
     <div className="min-h-screen flex gradient-bg">
-      {/* Side Menu: Fixed width, glass effect, and spaced content */}
       <div className="w-64 glass-effect p-6 flex flex-col justify-between">
         <div>
-          {/* Application branding in the side menu */}
           <div className="flex items-center space-x-3 mb-8">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
               <Brain className="w-6 h-6 text-white" />
@@ -262,7 +198,6 @@ const AIChat = () => {
             <h2 className="text-xl font-bold text-white">FinanceAI</h2>
           </div>
 
-          {/* New Chat button */}
           <button
             className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 mb-4"
             onClick={handleNewChat}
@@ -271,7 +206,6 @@ const AIChat = () => {
             <span>New Chat</span>
           </button>
 
-          {/* Past Chat Sessions */}
           <div className="space-y-2">
             <h3 className="text-gray-300 text-sm font-semibold">Past Chats</h3>
             {chatSessions.length > 0 ? (
@@ -282,7 +216,7 @@ const AIChat = () => {
                       type="text"
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      onBlur={() => handleEditTitle(session.id)} // Save on blur
+                      onBlur={() => handleEditTitle(session.id)}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           handleEditTitle(session.id);
@@ -328,23 +262,20 @@ const AIChat = () => {
           </div>
         </div>
 
-        {/* Finance Data Button */}
         <button
           className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 mt-4"
           onClick={() => navigate('/finance-data')}
         >
-          <MessageSquare className="w-5 h-5" /> {/* Using MessageSquare as a placeholder icon */}
+          <MessageSquare className="w-5 h-5" />
           <span>Finance Data</span>
         </button>
 
-        {/* Chat Profile and Logout section */}
         <div className="border-t border-gray-700 pt-4">
           <h3 className="text-gray-300 text-sm font-semibold mb-2">Chat Profile</h3>
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/profile')}>
             <User className="w-8 h-8 text-gray-400" />
-            <span className="text-white">{username}</span> {/* Display logged-in username */}
+            <span className="text-white">{username}</span>
           </div>
-          {/* Logout button */}
           <button
             className="w-full flex items-center justify-center space-x-2 px-4 py-2 mt-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200"
             onClick={handleLogout}
@@ -355,10 +286,8 @@ const AIChat = () => {
         </div>
       </div>
 
-      {/* Main Chat Area: Takes remaining width, centered content */}
       <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl w-full space-y-8 p-10 glass-effect rounded-xl shadow-lg z-10">
-          {/* Chat header with AI assistant branding */}
           <div className="flex items-center space-x-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
               <Brain className="w-6 h-6 text-white" />
@@ -366,26 +295,51 @@ const AIChat = () => {
             <h2 className="text-2xl font-bold text-white">AI Financial Assistant Chat - {currentChatTitle}</h2>
           </div>
 
-          {/* Chat messages display area */}
+          {error && (
+            <div className="flex items-center space-x-2 p-3 bg-red-500/20 text-red-300 rounded-lg">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{error}</span>
+            </div>
+          )}
+
           <div className="flex flex-col space-y-4 h-96 overflow-y-auto p-4 bg-white/10 rounded-lg">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+            {messages.length === 0 && !isLoading ? (
+              <div className="text-gray-400 text-center py-8">
+                <Brain className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Ask me anything about your finances!</p>
+                <p className="text-xs mt-2">e.g. "What's my spending trend?" or "How can I save more?"</p>
+              </div>
+            ) : (
+              messages.map((msg, index) => (
                 <div
-                  className={`max-w-[70%] p-3 rounded-lg ${msg.sender === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-800'
-                  }`}
+                  key={index}
+                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {msg.text}
+                  <div
+                    className={`max-w-[70%] p-3 rounded-lg ${msg.sender === 'user'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    <pre className="whitespace-pre-wrap font-sans text-sm">{msg.text}</pre>
+                  </div>
+                </div>
+              ))
+            )}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-200 text-gray-800 max-w-[70%] p-3 rounded-lg">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  </div>
                 </div>
               </div>
-            ))}
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Message input and send button */}
           <div className="flex space-x-4">
             <input
               type="text"
@@ -394,16 +348,18 @@ const AIChat = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !isLoading) {
                   handleSendMessage();
                 }
               }}
+              disabled={isLoading}
             />
             <button
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               onClick={handleSendMessage}
+              disabled={isLoading || !input.trim()}
             >
-              Send
+              <Send className="w-5 h-5" />
             </button>
           </div>
         </div>

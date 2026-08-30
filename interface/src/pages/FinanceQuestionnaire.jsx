@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain } from 'lucide-react';
+import { financeProfile, auth } from '../apiService';
 
 const FinanceQuestionnaire = () => {
   const navigate = useNavigate();
@@ -21,15 +22,14 @@ const FinanceQuestionnaire = () => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
-      [name]: (name === 'salary' || name === 'monthly_debt_payments' || name === 'housing_cost' || name === 'transportation_cost' || name === 'food_cost' || name === 'other_expenses' || name === 'savings_goal') 
-        ? (value === '' ? null : parseFloat(value)) 
+      [name]: (name === 'salary' || name === 'monthly_debt_payments' || name === 'housing_cost' || name === 'transportation_cost' || name === 'food_cost' || name === 'other_expenses' || name === 'savings_goal')
+        ? (value === '' ? null : parseFloat(value))
         : value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("handleSubmit triggered!"); // Debugging line
     setMessage({ type: '', text: '' });
 
     const token = localStorage.getItem('token');
@@ -39,32 +39,16 @@ const FinanceQuestionnaire = () => {
       return;
     }
 
-    console.log("Sending formData:", formData); // Debugging line
-
     try {
-      const response = await fetch('http://localhost:8000/api/finance_profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to save financial profile.');
-      }
-
+      await financeProfile.create(formData);
       setMessage({ type: 'success', text: 'Financial profile saved successfully!' });
-      navigate('/'); // Redirect to home page after saving profile
+      navigate('/');
     } catch (error) {
-      console.error("Error saving financial profile in fetch:", error); // More specific log
+      console.error('Error saving financial profile:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
-  console.log("FinanceQuestionnaire component rendering."); // Debugging line
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12 px-4 sm:px-6 lg:px-8">
       <header className="fixed w-full top-0 z-50 glass-effect py-4">
@@ -96,7 +80,6 @@ const FinanceQuestionnaire = () => {
         )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {/* Salary */}
           <div>
             <label htmlFor="salary" className="sr-only">Annual Salary</label>
             <input
@@ -111,8 +94,6 @@ const FinanceQuestionnaire = () => {
               onChange={handleChange}
             />
           </div>
-
-          {/* Monthly Debt Payments */}
           <div>
             <label htmlFor="monthly_debt_payments" className="sr-only">Monthly Debt Payments</label>
             <input
@@ -126,8 +107,6 @@ const FinanceQuestionnaire = () => {
               onChange={handleChange}
             />
           </div>
-
-          {/* Housing Cost */}
           <div>
             <label htmlFor="housing_cost" className="sr-only">Monthly Housing Cost</label>
             <input
@@ -141,8 +120,6 @@ const FinanceQuestionnaire = () => {
               onChange={handleChange}
             />
           </div>
-
-          {/* Transportation Cost */}
           <div>
             <label htmlFor="transportation_cost" className="sr-only">Monthly Transportation Cost</label>
             <input
@@ -156,8 +133,6 @@ const FinanceQuestionnaire = () => {
               onChange={handleChange}
             />
           </div>
-
-          {/* Food Cost */}
           <div>
             <label htmlFor="food_cost" className="sr-only">Monthly Food Cost</label>
             <input
@@ -171,8 +146,6 @@ const FinanceQuestionnaire = () => {
               onChange={handleChange}
             />
           </div>
-
-          {/* Other Expenses */}
           <div>
             <label htmlFor="other_expenses" className="sr-only">Other Monthly Expenses</label>
             <input
@@ -186,8 +159,6 @@ const FinanceQuestionnaire = () => {
               onChange={handleChange}
             />
           </div>
-
-          {/* Savings Goal */}
           <div>
             <label htmlFor="savings_goal" className="sr-only">Savings Goal</label>
             <input
@@ -201,8 +172,6 @@ const FinanceQuestionnaire = () => {
               onChange={handleChange}
             />
           </div>
-
-          {/* Risk Tolerance */}
           <div>
             <label htmlFor="risk_tolerance" className="sr-only">Risk Tolerance</label>
             <select
@@ -218,8 +187,6 @@ const FinanceQuestionnaire = () => {
               <option value="high">High</option>
             </select>
           </div>
-
-          {/* Investment Experience */}
           <div>
             <label htmlFor="investment_experience" className="sr-only">Investment Experience</label>
             <select
@@ -236,7 +203,6 @@ const FinanceQuestionnaire = () => {
               <option value="expert">Expert</option>
             </select>
           </div>
-
           <div>
             <button
               type="submit"

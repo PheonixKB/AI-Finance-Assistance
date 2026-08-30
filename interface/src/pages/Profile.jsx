@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Brain, User, Check, X, Edit } from 'lucide-react';
-import { jwtDecode } from 'jwt-decode';
+import { Brain, User, Edit } from 'lucide-react';
+import { auth, permissions, financeProfile } from '../apiService';
 
 const Profile = () => {
   const [username, setUsername] = useState('');
@@ -9,13 +9,14 @@ const Profile = () => {
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
   const [permissions, setPermissions] = useState({
-    assets: false,
-    liabilities: false,
-    transactions: false,
-    investments: false,
-    epf: false,
-    creditScore: false,
+    assets: true,
+    liabilities: true,
+    transactions: true,
+    investments: true,
+    epf: true,
+    credit_score: true,
   });
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false);
   const [financeProfile, setFinanceProfile] = useState({
     salary: '',
     monthly_debt_payments: '',
@@ -28,20 +29,32 @@ const Profile = () => {
     investment_experience: '',
   });
   const [isEditingFinanceProfile, setIsEditingFinanceProfile] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' }); // For success/error messages
+  const [message, setMessage] = useState({ type: '', text: '' });
   const navigate = useNavigate();
 
   const fetchFinanceProfile = async (token) => {
     try {
-      const response = await fetch('http://localhost:8000/api/finance_profile', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch finance profile');
-      const data = await response.json();
+      const data = await financeProfile.get();
       setFinanceProfile(data);
     } catch (error) {
-      console.error("Error fetching finance profile:", error);
+      console.error('Error fetching finance profile:', error);
       setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const fetchPermissions = async () => {
+    try {
+      const data = await permissions.get();
+      setPermissions({
+        assets: data.assets ?? true,
+        liabilities: data.liabilities ?? true,
+        transactions: data.transactions ?? true,
+        investments: data.investments ?? true,
+        epf: data.epf ?? true,
+        credit_score: data.credit_score ?? data.creditScore ?? true,
+      });
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
     }
   };
 
@@ -49,22 +62,19 @@ const Profile = () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const decodedToken = jwtDecode(token);
+        const decodedToken = auth.decodeToken();
+        if (!decodedToken) {
+          localStorage.removeItem('token');
+          navigate('/signin');
+          return;
+        }
         setUsername(decodedToken.username || 'User');
-        setEmail(decodedToken.sub || ''); // 'sub' typically holds the email
+        setEmail(decodedToken.sub || '');
         setEditedUsername(decodedToken.username || 'User');
-        fetchFinanceProfile(token); // Fetch finance profile data
-        // TODO: Fetch actual permissions from backend
-        setPermissions({
-          assets: true,
-          liabilities: false,
-          transactions: true,
-          investments: false,
-          epf: true,
-          creditScore: false,
-        });
+        fetchFinanceProfile(token);
+        fetchPermissions();
       } catch (error) {
-        console.error("Error decoding token:", error);
+        console.error('Error decoding token:', error);
         localStorage.removeItem('token');
         navigate('/signin');
       }
@@ -83,36 +93,14 @@ const Profile = () => {
       return;
     }
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-
     try {
-      const response = await fetch('http://localhost:8000/api/me', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ username: editedUsername }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API Error:", errorData); // Log API error response
-        throw new Error(errorData.detail || 'Failed to update username');
-      }
-
-      const data = await response.json();
-      console.log("API Response:", data); // Log successful API response
-      localStorage.setItem('token', data.access_token); // Store the new JWT token
-      setUsername(data.username); // Update local state with new username
+      const data = await auth.updateUser(editedUsername);
+      localStorage.setItem('token', data.access_token);
+      setUsername(data.username);
       setMessage({ type: 'success', text: 'Username updated successfully!' });
       setIsEditingUsername(false);
     } catch (error) {
-      console.error("Error updating username:", error); // Log caught JavaScript errors
+      console.error('Error updating username:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
@@ -126,41 +114,45 @@ const Profile = () => {
   };
 
   const handleUpdateFinanceProfile = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-
     try {
-      const response = await fetch('http://localhost:8000/api/finance_profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(financeProfile),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update financial profile');
-      }
-
+      await financeProfile.update(financeProfile);
       setMessage({ type: 'success', text: 'Financial profile updated successfully!' });
       setIsEditingFinanceProfile(false);
     } catch (error) {
-      console.error("Error updating financial profile:", error);
+      console.error('Error updating financial profile:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
-  const handlePermissionChange = (permissionName) => {
-    setPermissions((prevPermissions) => ({
-      ...prevPermissions,
-      [permissionName]: !prevPermissions[permissionName],
-    }));
-    // TODO: Send update to backend
+  const handlePermissionChange = async (permissionName) => {
+    const newPermissions = {
+      ...permissions,
+      [permissionName]: !permissions[permissionName],
+    };
+    setPermissions(newPermissions);
+
+    try {
+      setIsSavingPermissions(true);
+      await permissions.update(newPermissions);
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      setPermissions({
+        ...permissions,
+        [permissionName]: !newPermissions[permissionName],
+      });
+      setMessage({ type: 'error', text: `Failed to update ${permissionName} permission.` });
+    } finally {
+      setIsSavingPermissions(false);
+    }
+  };
+
+  const permissionLabels = {
+    assets: 'Assets',
+    liabilities: 'Liabilities',
+    transactions: 'Transactions',
+    investments: 'Investments',
+    epf: 'EPF',
+    credit_score: 'Credit Score',
   };
 
   return (
@@ -179,13 +171,13 @@ const Profile = () => {
               <p className="text-xs text-gray-600">Smart Financial Assistant</p>
             </div>
           </div>
-          <div className="w-20"></div> {/* Spacer */}
+          <div className="w-20"></div>
         </div>
       </header>
 
       <div className="max-w-2xl w-full space-y-8 p-10 glass-effect rounded-xl shadow-lg z-10 mt-20">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-white">User Profile</h2>
-        
+
         {message.text && (
           <div className={`p-3 rounded-md text-center ${message.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
             {message.text}
@@ -200,7 +192,7 @@ const Profile = () => {
                 type="text"
                 value={editedUsername}
                 onChange={(e) => setEditedUsername(e.target.value)}
-                onBlur={handleUpdateUsername} // Save on blur
+                onBlur={handleUpdateUsername}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     handleUpdateUsername();
@@ -224,13 +216,11 @@ const Profile = () => {
           <span className="text-gray-300 text-lg">{email}</span>
         </div>
 
-        {/* Financial Profile */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-white">Financial Profile</h3>
           <div className="bg-white/10 p-4 rounded-lg">
             {isEditingFinanceProfile ? (
               <form onSubmit={(e) => { e.preventDefault(); handleUpdateFinanceProfile(); }} className="space-y-3">
-                {/* Salary */}
                 <div>
                   <label htmlFor="salary" className="text-white text-sm">Annual Salary</label>
                   <input
@@ -243,7 +233,6 @@ const Profile = () => {
                     onChange={handleFinanceProfileChange}
                   />
                 </div>
-                {/* Monthly Debt Payments */}
                 <div>
                   <label htmlFor="monthly_debt_payments" className="text-white text-sm">Monthly Debt Payments</label>
                   <input
@@ -256,7 +245,6 @@ const Profile = () => {
                     onChange={handleFinanceProfileChange}
                   />
                 </div>
-                {/* Housing Cost */}
                 <div>
                   <label htmlFor="housing_cost" className="text-white text-sm">Monthly Housing Cost</label>
                   <input
@@ -269,7 +257,6 @@ const Profile = () => {
                     onChange={handleFinanceProfileChange}
                   />
                 </div>
-                {/* Transportation Cost */}
                 <div>
                   <label htmlFor="transportation_cost" className="text-white text-sm">Monthly Transportation Cost</label>
                   <input
@@ -282,7 +269,6 @@ const Profile = () => {
                     onChange={handleFinanceProfileChange}
                   />
                 </div>
-                {/* Food Cost */}
                 <div>
                   <label htmlFor="food_cost" className="text-white text-sm">Monthly Food Cost</label>
                   <input
@@ -295,7 +281,6 @@ const Profile = () => {
                     onChange={handleFinanceProfileChange}
                   />
                 </div>
-                {/* Other Expenses */}
                 <div>
                   <label htmlFor="other_expenses" className="text-white text-sm">Other Monthly Expenses</label>
                   <input
@@ -308,7 +293,6 @@ const Profile = () => {
                     onChange={handleFinanceProfileChange}
                   />
                 </div>
-                {/* Savings Goal */}
                 <div>
                   <label htmlFor="savings_goal" className="text-white text-sm">Savings Goal</label>
                   <input
@@ -321,7 +305,6 @@ const Profile = () => {
                     onChange={handleFinanceProfileChange}
                   />
                 </div>
-                {/* Risk Tolerance */}
                 <div>
                   <label htmlFor="risk_tolerance" className="text-white text-sm">Risk Tolerance</label>
                   <select
@@ -337,7 +320,6 @@ const Profile = () => {
                     <option value="high">High</option>
                   </select>
                 </div>
-                {/* Investment Experience */}
                 <div>
                   <label htmlFor="investment_experience" className="text-white text-sm">Investment Experience</label>
                   <select
@@ -415,10 +397,11 @@ const Profile = () => {
           <h3 className="text-xl font-bold text-white">Data Permissions</h3>
           {Object.entries(permissions).map(([key, value]) => (
             <div key={key} className="flex items-center justify-between bg-white/10 p-4 rounded-lg">
-              <span className="text-white capitalize">{key}</span>
+              <span className="text-white capitalize">{permissionLabels[key] || key}</span>
               <button
                 onClick={() => handlePermissionChange(key)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${value ? 'bg-blue-600' : 'bg-gray-400'}`}
+                disabled={isSavingPermissions}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${value ? 'bg-blue-600' : 'bg-gray-400'} ${isSavingPermissions ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <span className="sr-only">Enable {key}</span>
                 <span

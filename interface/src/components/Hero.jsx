@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { ArrowRight, Sparkles, Shield, Zap } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { jwtDecode } from 'jwt-decode';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, Sparkles, Shield, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { auth, financeProfile, transactions as txApi } from '../apiService';
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -13,86 +13,12 @@ const Hero = () => {
     ai_optimization: 0,
   });
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        // No need to set username here, as it's not displayed in Hero
-
-        const fetchFinanceData = async () => {
-          let monthlySpending = 0;
-          let spendingChartData = [];
-          let savingsGoal = 0;
-          let totalSavings = 0;
-
-          // Fetch finance profile for savings goal
-          try {
-            const response = await fetch('http://localhost:8000/api/finance_profile', {
-              headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (response.ok) {
-              const profileData = await response.json();
-              savingsGoal = profileData.savings_goal || 0;
-            }
-          } catch (error) {
-            console.error("Error fetching finance profile:", error);
-          }
-
-          // Fetch all transactions
-          try {
-            const response = await fetch('http://localhost:8000/api/transactions', {
-              headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (response.ok) {
-              const transactions = await response.json();
-              const { processedMonthlySpending, processedSpendingChartData, processedTotalSavings } = processTransactions(transactions);
-              monthlySpending = processedMonthlySpending;
-              spendingChartData = processedSpendingChartData;
-              totalSavings = processedTotalSavings;
-            } else {
-              console.error("Failed to fetch transactions");
-            }
-          } catch (error) {
-            console.error("Error fetching transactions:", error);
-          }
-
-          setData({
-            monthly_spending: monthlySpending,
-            spending_chart: spendingChartData,
-            savings_current: totalSavings,
-            savings_goal: savingsGoal,
-            ai_optimization: 12, // Placeholder for now
-          });
-        };
-
-        fetchFinanceData();
-
-      } catch (error) {
-        console.error("Error decoding token:", error);
-        localStorage.removeItem('token');
-        navigate('/signin');
-      }
-    } else {
-      // If no token, set default data or redirect to signin
-      // For now, we'll just set default values
-      setData({
-        monthly_spending: 3247,
-        spending_chart: [60, 80, 45, 90],
-        savings_current: 2100,
-        savings_goal: 5000,
-        ai_optimization: 12,
-      });
-    }
-  }, [navigate]);
-
-  const processTransactions = (transactions) => {
+  const processTransactions = (txList) => {
     const monthlySpendingMap = {};
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // Initialize monthly spending for the last 4 months
     for (let i = 0; i < 4; i++) {
       let month = currentMonth - i;
       let year = currentYear;
@@ -107,29 +33,26 @@ const Hero = () => {
     let totalCurrentMonthSpending = 0;
     let calculatedTotalSavings = 0;
 
-    transactions.forEach(tx => {
+    txList.forEach((tx) => {
       const txDate = new Date(tx.date);
       const txMonth = txDate.getMonth();
       const txYear = txDate.getFullYear();
       const monthKey = `${txYear}-${txMonth + 1}`;
 
-      // Only consider transactions from the last 4 months
       if (monthlySpendingMap.hasOwnProperty(monthKey)) {
         monthlySpendingMap[monthKey] += tx.amount;
       }
 
-      // Calculate total spending for the current month
       if (txMonth === currentMonth && txYear === currentYear) {
         totalCurrentMonthSpending += tx.amount;
       }
-      // Assuming positive amounts are income/savings and negative are expenses
-      calculatedTotalSavings += tx.amount; // This needs more sophisticated logic for actual savings
+      calculatedTotalSavings += tx.amount;
     });
 
     const spendingValues = Object.values(monthlySpendingMap);
-    const maxSpending = Math.max(...spendingValues, 1); // Avoid division by zero
+    const maxSpending = Math.max(...spendingValues, 1);
 
-    const chartData = spendingValues.map(spending => (spending / maxSpending) * 100);
+    const chartData = spendingValues.map((spending) => (spending / maxSpending) * 100);
 
     return {
       processedMonthlySpending: totalCurrentMonthSpending,
@@ -137,6 +60,64 @@ const Hero = () => {
       processedTotalSavings: calculatedTotalSavings,
     };
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken = auth.decodeToken();
+        if (!decodedToken) {
+          localStorage.removeItem('token');
+          return;
+        }
+
+        const fetchFinanceData = async () => {
+          let monthlySpending = 0;
+          let spendingChartData = [];
+          let savingsGoal = 0;
+          let totalSavings = 0;
+
+          try {
+            const profileData = await financeProfile.get();
+            savingsGoal = profileData.savings_goal || 0;
+          } catch (error) {
+            console.error('Error fetching finance profile:', error);
+          }
+
+          try {
+            const txList = await txApi.getAll();
+            const { processedMonthlySpending, processedSpendingChartData, processedTotalSavings } = processTransactions(txList);
+            monthlySpending = processedMonthlySpending;
+            spendingChartData = processedSpendingChartData;
+            totalSavings = processedTotalSavings;
+          } catch (error) {
+            console.error('Error fetching transactions:', error);
+          }
+
+          setData({
+            monthly_spending: monthlySpending,
+            spending_chart: spendingChartData,
+            savings_current: totalSavings,
+            savings_goal: savingsGoal,
+            ai_optimization: 12,
+          });
+        };
+
+        fetchFinanceData();
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        localStorage.removeItem('token');
+      }
+    } else {
+      setData({
+        monthly_spending: 3247,
+        spending_chart: [60, 80, 45, 90],
+        savings_current: 2100,
+        savings_goal: 5000,
+        ai_optimization: 12,
+      });
+    }
+  }, []);
 
   if (!data) {
     return <p className="text-white">Loading...</p>;

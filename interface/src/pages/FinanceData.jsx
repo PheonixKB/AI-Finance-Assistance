@@ -1,8 +1,7 @@
-// interface/src/pages/FinanceData.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react';
-import { jwtDecode } from 'jwt-decode';
+import { auth, summaryFinance, investments, accounts, upload, content, goals, transactions } from '../apiService';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto';
 
@@ -11,35 +10,30 @@ const FinanceData = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const navigate = useNavigate();
 
-  // Summary Finance States
   const [creditScore, setCreditScore] = useState('');
   const [epfBalance, setEpfBalance] = useState('');
   const [isEditingSummary, setIsEditingSummary] = useState(false);
 
-  // Investments States
-  const [investments, setInvestments] = useState([]);
+  const [investmentList, setInvestmentList] = useState([]);
   const [selectedInvestmentFile, setSelectedInvestmentFile] = useState(null);
 
-  // Accounts States
-  const [accounts, setAccounts] = useState([]);
+  const [accountList, setAccountList] = useState([]);
   const [newAccount, setNewAccount] = useState({
     account_name: '',
     bank_name: '',
-
     account_type: '',
     balance: '',
   });
   const [editingAccountId, setEditingAccountId] = useState(null);
 
-  const [transactions, setTransactions] = useState([]);
+  const [transactionList, setTransactionList] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
 
-  // Budget Summary States
   const [budgetSummary, setBudgetSummary] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [investmentInsights, setInvestmentInsights] = useState(null);
 
-  // Goals States
   const [goals, setGoals] = useState([]);
   const [newGoal, setNewGoal] = useState({
     goal_name: '',
@@ -47,55 +41,49 @@ const FinanceData = () => {
     deadline: '',
   });
   const [editingGoalId, setEditingGoalId] = useState(null);
-  const [goalProgressInsights, setGoalProgressInsights] = useState({});
 
   // --- API Calls ---
-  const fetchSummaryFinance = async (token) => {
+
+  const fetchSummaryFinance = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/summary_finance', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch summary finance');
-      const data = await response.json();
+      const data = await summaryFinance.get();
       setCreditScore(data.credit_score || '');
       setEpfBalance(data.epf_balance || '');
     } catch (error) {
-      console.error("Error fetching summary finance:", error);
+      console.error('Error fetching summary finance:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
   const updateSummaryFinance = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
     try {
-      const response = await fetch('http://localhost:8000/api/summary_finance', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ credit_score: creditScore, epf_balance: epfBalance }),
-      });
-      if (!response.ok) throw new Error('Failed to update summary finance');
+      await summaryFinance.update({ credit_score: creditScore, epf_balance: epfBalance });
       setMessage({ type: 'success', text: 'Summary finance updated!' });
       setIsEditingSummary(false);
     } catch (error) {
-      console.error("Error updating summary finance:", error);
+      console.error('Error updating summary finance:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
-  const fetchInvestments = async (token) => {
+  const fetchInvestments = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/investments', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch investments');
-      const data = await response.json();
-      setInvestments(data);
+      const data = await investments.getAll();
+      setInvestmentList(data);
     } catch (error) {
-      console.error("Error fetching investments:", error);
+      console.error('Error fetching investments:', error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const deleteInvestment = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this investment?')) return;
+    try {
+      await investments.delete(id);
+      setMessage({ type: 'success', text: 'Investment deleted!' });
+      fetchInvestments();
+    } catch (error) {
+      console.error('Error deleting investment:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
@@ -110,187 +98,123 @@ const FinanceData = () => {
       return;
     }
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const formData = new FormData();
-    formData.append('file', selectedInvestmentFile);
-
     try {
-      const response = await fetch('http://localhost:8000/api/upload/investments', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to upload investments');
-      }
-
-      setMessage({ type: 'success', text: 'Investments uploaded successfully!' });
-      setSelectedInvestmentFile(null); // Clear selected file
-      fetchInvestments(token); // Re-fetch investments to update the list
+      const data = await upload.investments(selectedInvestmentFile);
+      setMessage({ type: 'success', text: data.message || 'Investments uploaded successfully!' });
+      setSelectedInvestmentFile(null);
+      fetchInvestments();
     } catch (error) {
-      console.error("Error uploading investments:", error);
+      console.error('Error uploading investments:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
-  const fetchAccounts = async (token) => {
+  const fetchAccounts = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/accounts', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch accounts');
-      const data = await response.json();
-      setAccounts(data);
+      const data = await accounts.getAll();
+      setAccountList(data);
     } catch (error) {
-      console.error("Error fetching accounts:", error);
+      console.error('Error fetching accounts:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
-  const fetchBudgetSummary = async (token) => {
+  const fetchBudgetSummary = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/budget-summary', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch budget summary');
-      const data = await response.json();
+      const data = await content.getBudgetSummary();
       setBudgetSummary(data);
 
       if (data.categorized_expenses && data.categorized_expenses.length > 0) {
-        const labels = data.categorized_expenses.map(exp => exp.category);
-        const totals = data.categorized_expenses.map(exp => exp.total_spent);
+        const labels = data.categorized_expenses.map((exp) => exp.category);
+        const totals = data.categorized_expenses.map((exp) => exp.total_spent);
         setChartData({
-          labels: labels,
+          labels,
           datasets: [
             {
               data: totals,
               backgroundColor: [
-                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
               ],
               hoverBackgroundColor: [
-                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
               ],
             },
           ],
         });
       }
     } catch (error) {
-      console.error("Error fetching budget summary:", error);
+      console.error('Error fetching budget summary:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
-  const fetchInvestmentInsights = async (token) => {
+  const fetchInvestmentInsights = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/investment-insights', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch investment insights');
-      const data = await response.json();
+      const data = await content.getInvestmentInsights();
       setInvestmentInsights(data);
     } catch (error) {
-      console.error("Error fetching investment insights:", error);
+      console.error('Error fetching investment insights:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
   const createAccount = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
     try {
-      const response = await fetch('http://localhost:8000/api/accounts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(newAccount),
-      });
-      if (!response.ok) throw new Error('Failed to create account');
+      await accounts.create(newAccount);
       setMessage({ type: 'success', text: 'Account created!' });
-      setNewAccount({ account_name: '', bank_name: '', account_number: '', account_type: '', balance: '' });
-      fetchAccounts(token);
+      setNewAccount({ account_name: '', bank_name: '', account_type: '', balance: '' });
+      fetchAccounts();
     } catch (error) {
-      console.error("Error creating account:", error);
+      console.error('Error creating account:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
   const updateAccount = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
     try {
-      const accountToUpdate = accounts.find(acc => acc.id === id);
-      const response = await fetch(`http://localhost:8000/api/accounts/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(accountToUpdate),
-      });
-      if (!response.ok) throw new Error('Failed to update account');
+      const accountToUpdate = accountList.find((acc) => acc.id === id);
+      await accounts.update(id, accountToUpdate);
       setMessage({ type: 'success', text: 'Account updated!' });
       setEditingAccountId(null);
-      fetchAccounts(token);
+      fetchAccounts();
     } catch (error) {
-      console.error("Error updating account:", error);
+      console.error('Error updating account:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
   const deleteAccount = async (id) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    if (!window.confirm("Are you sure you want to delete this account?")) return;
+    if (!window.confirm('Are you sure you want to delete this account?')) return;
     try {
-      const response = await fetch(`http://localhost:8000/api/accounts/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to delete account');
+      await accounts.delete(id);
       setMessage({ type: 'success', text: 'Account deleted!' });
-      fetchAccounts(token);
+      fetchAccounts();
     } catch (error) {
-      console.error("Error deleting account:", error);
+      console.error('Error deleting account:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
-  const fetchTransactions = async (accountId, token) => {
+  const fetchTransactions = async (accountId) => {
+    if (!accountId) return;
+    setSelectedAccountId(accountId);
     try {
-      const response = await fetch(`http://localhost:8000/api/accounts/${accountId}/transactions`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to fetch transactions');
-      const data = await response.json();
-      setTransactions(data);
+      const data = await accounts.getTransactions(accountId);
+      setTransactionList(data);
     } catch (error) {
-      console.error("Error fetching transactions:", error);
+      console.error('Error fetching transactions:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
   const deleteTransaction = async (id, accountId) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    if (!window.confirm("Are you sure you want to delete this transaction?")) return;
+    if (!window.confirm('Are you sure you want to delete this transaction?')) return;
     try {
-      const response = await fetch(`http://localhost:8000/api/transactions/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Failed to delete transaction');
+      await transactions.delete(id);
       setMessage({ type: 'success', text: 'Transaction deleted!' });
-      fetchTransactions(accountId, token);
+      fetchTransactions(accountId);
     } catch (error) {
-      console.error("Error deleting transaction:", error);
+      console.error('Error deleting transaction:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
@@ -305,57 +229,107 @@ const FinanceData = () => {
       return;
     }
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
     try {
-      const response = await fetch('http://localhost:8000/api/upload/transactions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to upload transactions');
-      }
-
-      setMessage({ type: 'success', text: 'Transactions uploaded successfully!' });
-      setSelectedFile(null); // Clear selected file
-      // Optionally re-fetch transactions to update the list
-      // fetchTransactions(selectedAccountId, token);
+      const data = await upload.transactions(selectedFile);
+      setMessage({ type: 'success', text: data.message || 'Transactions uploaded successfully!' });
+      setSelectedFile(null);
+      fetchTransactions(selectedAccountId, localStorage.getItem('token'));
     } catch (error) {
-      console.error("Error uploading transactions:", error);
+      console.error('Error uploading transactions:', error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const fetchGoals = async () => {
+    try {
+      const data = await goals.getAll();
+      setGoals(data);
+    } catch (error) {
+      console.error('Error fetching goals:', error);
+    }
+  };
+
+  const createGoal = async () => {
+    if (!newGoal.goal_name || !newGoal.target_amount) {
+      setMessage({ type: 'error', text: 'Goal name and target amount are required.' });
+      return;
+    }
+    try {
+      await goals.create({
+        goal_name: newGoal.goal_name,
+        target_amount: parseFloat(newGoal.target_amount),
+        deadline: newGoal.deadline || null,
+      });
+      setMessage({ type: 'success', text: 'Goal created!' });
+      setNewGoal({ goal_name: '', target_amount: '', deadline: '' });
+      fetchGoals();
+    } catch (error) {
+      console.error('Error creating goal:', error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const updateGoal = async (id) => {
+    try {
+      await goals.update(id, {
+        goal_name: goals.find((g) => g.id === id)?.goal_name || '',
+        target_amount: parseFloat(goals.find((g) => g.id === id)?.target_amount || 0),
+        current_progress: parseFloat(goals.find((g) => g.id === id)?.current_progress || 0),
+        deadline: goals.find((g) => g.id === id)?.deadline || null,
+      });
+      setMessage({ type: 'success', text: 'Goal updated!' });
+      setEditingGoalId(null);
+      fetchGoals();
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const deleteGoal = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this goal?')) return;
+    try {
+      await goals.delete(id);
+      setMessage({ type: 'success', text: 'Goal deleted!' });
+      fetchGoals();
+    } catch (error) {
+      console.error('Error deleting goal:', error);
       setMessage({ type: 'error', text: error.message });
     }
   };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        setUsername(decodedToken.username || 'User');
-        fetchSummaryFinance(token);
-        fetchInvestments(token);
-        fetchAccounts(token);
-        fetchBudgetSummary(token);
-        fetchInvestmentInsights(token);
-      } catch (error) {
-        console.error("Error decoding token:", error);
-        localStorage.removeItem('token');
-        navigate('/signin');
-      }
-    }
-   else {
+    if (!token) {
       navigate('/signin');
+      return;
     }
+    const decodedToken = auth.decodeToken();
+    if (!decodedToken) {
+      localStorage.removeItem('token');
+      navigate('/signin');
+      return;
+    }
+    setUsername(decodedToken.username || 'User');
+    fetchSummaryFinance();
+    fetchInvestments();
+    fetchAccounts();
+    fetchBudgetSummary();
+    fetchInvestmentInsights();
+    fetchGoals();
   }, [navigate]);
+
+  const deleteTransactionViaAPI = async (id, accountId) => {
+    if (!window.confirm('Are you sure you want to delete this transaction?')) return;
+    try {
+       await transactions.delete(id);
+      setMessage({ type: 'success', text: 'Transaction deleted!' });
+      fetchTransactions(accountId);
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gradient-bg py-12 px-4 sm:px-6 lg:px-8">
@@ -373,13 +347,13 @@ const FinanceData = () => {
               <p className="text-xs text-gray-600">Smart Financial Assistant</p>
             </div>
           </div>
-          <div className="w-20"></div> {/* Spacer */}
+          <div className="w-20"></div>
         </div>
       </header>
 
       <div className="max-w-4xl w-full space-y-8 p-10 glass-effect rounded-xl shadow-lg z-10 mt-20">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-white">Finance Data for {username}</h2>
-        
+
         {message.text && (
           <div className={`p-3 rounded-md text-center ${message.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
             {message.text}
@@ -430,6 +404,55 @@ const FinanceData = () => {
           </div>
         </div>
 
+        {/* Goals */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-white">Financial Goals</h3>
+          {goals.map((goal) => (
+            <div key={goal.id} className="bg-white/10 p-4 rounded-lg flex justify-between items-center">
+              <div>
+                <p className="text-white font-semibold">{goal.goal_name}</p>
+                <p className="text-gray-300 text-sm">
+                  Target: ${goal.target_amount} | Progress: ${goal.current_progress || 0}
+                  {goal.deadline && ` | Deadline: ${new Date(goal.deadline).toLocaleDateString()}`}
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button onClick={() => navigate(`/goal-progress/${goal.id}`)} className="text-blue-400 hover:text-blue-300 text-xs px-2 py-1">
+                  View Progress
+                </button>
+                <button onClick={() => deleteGoal(goal.id)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            </div>
+          ))}
+          <div className="bg-white/10 p-4 rounded-lg">
+            <h4 className="text-white font-semibold mb-2">Add New Goal</h4>
+            <input
+              type="text"
+              placeholder="Goal Name"
+              value={newGoal.goal_name}
+              onChange={(e) => setNewGoal({ ...newGoal, goal_name: e.target.value })}
+              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="number"
+              placeholder="Target Amount"
+              value={newGoal.target_amount}
+              onChange={(e) => setNewGoal({ ...newGoal, target_amount: e.target.value })}
+              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="date"
+              placeholder="Deadline"
+              value={newGoal.deadline}
+              onChange={(e) => setNewGoal({ ...newGoal, deadline: e.target.value })}
+              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button onClick={createGoal} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              Add Goal
+            </button>
+          </div>
+        </div>
+
         {/* Smart Budgeting */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-white">Smart Budgeting</h3>
@@ -439,11 +462,11 @@ const FinanceData = () => {
               {chartData && <Pie data={chartData} />}
               <h4 className="text-white font-semibold mt-4 mb-2">AI Budget Suggestions</h4>
               <p className="text-gray-300 text-sm whitespace-pre-wrap">{budgetSummary.suggestions}</p>
-            <div className="text-center mt-4">
-              <button onClick={() => navigate('/smart-budgeting')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                View Smart Budgeting
-              </button>
-            </div>
+              <div className="text-center mt-4">
+                <button onClick={() => navigate('/smart-budgeting')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  View Smart Budgeting
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-gray-400 text-sm">Upload transactions and set your salary to get smart budgeting insights.</div>
@@ -453,7 +476,7 @@ const FinanceData = () => {
         {/* Investments */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-white">Investments</h3>
-          {investments.slice(0, 10).map((inv) => (
+          {investmentList.slice(0, 10).map((inv) => (
             <div key={inv.id} className="bg-white/10 p-4 rounded-lg flex justify-between items-center">
               <div>
                 <p className="text-white font-semibold">{inv.name} ({inv.investment_type})</p>
@@ -464,14 +487,13 @@ const FinanceData = () => {
               </div>
             </div>
           ))}
-          {investments.length > 10 && (
+          {investmentList.length > 10 && (
             <div className="text-center mt-4">
               <button onClick={() => navigate('/all-investments')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                 Read More
               </button>
             </div>
           )}
-          {/* File Upload Section for Investments */}
           <div className="bg-white/10 p-4 rounded-lg mt-4">
             <h4 className="text-white font-semibold mb-2">Upload Investments (Excel/PDF)</h4>
             <input
@@ -493,6 +515,11 @@ const FinanceData = () => {
             <div className="bg-white/10 p-4 rounded-lg">
               <h4 className="text-white font-semibold mb-2">AI-Powered Recommendations</h4>
               <p className="text-gray-300 text-sm whitespace-pre-wrap">{investmentInsights.insights}</p>
+              <div className="text-center mt-4">
+                <button onClick={() => navigate('/investment-insights')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  View Full Insights
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-gray-400 text-sm">Complete your finance profile and upload investments to get personalized insights.</div>
@@ -502,7 +529,7 @@ const FinanceData = () => {
         {/* Accounts */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-white">Accounts</h3>
-          {accounts.map((acc) => (
+          {accountList.map((acc) => (
             <div key={acc.id} className="bg-white/10 p-4 rounded-lg flex justify-between items-center">
               <div>
                 <p className="text-white font-semibold">{acc.account_name} ({acc.bank_name})</p>
@@ -516,30 +543,71 @@ const FinanceData = () => {
           ))}
           {editingAccountId && (
             <div className="bg-white/10 p-4 rounded-lg mt-4">
-              {/* Edit Account Form */}
               <h4 className="text-white font-semibold mb-2">Edit Account</h4>
-              <input type="text" placeholder="Account Name" value={accounts.find(acc => acc.id === editingAccountId)?.account_name || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, account_name: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <input type="text" placeholder="Bank Name" value={accounts.find(acc => acc.id === editingAccountId)?.bank_name || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, bank_name: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-
-
-              <input type="text" placeholder="Account Type" value={accounts.find(acc => acc.id === editingAccountId)?.account_type || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, account_type: e.target.value } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <input type="number" placeholder="Balance" value={accounts.find(acc => acc.id === editingAccountId)?.balance || ''} onChange={(e) => setAccounts(accounts.map(acc => acc.id === editingAccountId ? { ...acc, balance: parseFloat(e.target.value) } : acc))} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input
+                type="text"
+                placeholder="Account Name"
+                value={accountList.find((acc) => acc.id === editingAccountId)?.account_name || ''}
+                onChange={(e) => setAccountList(accountList.map((acc) => acc.id === editingAccountId ? { ...acc, account_name: e.target.value } : acc))}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Bank Name"
+                value={accountList.find((acc) => acc.id === editingAccountId)?.bank_name || ''}
+                onChange={(e) => setAccountList(accountList.map((acc) => acc.id === editingAccountId ? { ...acc, bank_name: e.target.value } : acc))}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Account Type"
+                value={accountList.find((acc) => acc.id === editingAccountId)?.account_type || ''}
+                onChange={(e) => setAccountList(accountList.map((acc) => acc.id === editingAccountId ? { ...acc, account_type: e.target.value } : acc))}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="number"
+                placeholder="Balance"
+                value={accountList.find((acc) => acc.id === editingAccountId)?.balance || ''}
+                onChange={(e) => setAccountList(accountList.map((acc) => acc.id === editingAccountId ? { ...acc, balance: parseFloat(e.target.value) } : acc))}
+                className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button onClick={() => updateAccount(editingAccountId)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2">Save</button>
               <button onClick={() => setEditingAccountId(null)} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Cancel</button>
             </div>
           )}
           <div className="bg-white/10 p-4 rounded-lg">
             <h4 className="text-white font-semibold mb-2">Add New Account</h4>
-            <input type="text" placeholder="Account Name" value={newAccount.account_name} onChange={(e) => setNewAccount({ ...newAccount, account_name: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="text" placeholder="Bank Name" value={newAccount.bank_name} onChange={(e) => setNewAccount({ ...newAccount, bank_name: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
-
-
-            <select value={newAccount.account_type} onChange={(e) => setNewAccount({ ...newAccount, account_type: e.target.value })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input
+              type="text"
+              placeholder="Account Name"
+              value={newAccount.account_name}
+              onChange={(e) => setNewAccount({ ...newAccount, account_name: e.target.value })}
+              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Bank Name"
+              value={newAccount.bank_name}
+              onChange={(e) => setNewAccount({ ...newAccount, bank_name: e.target.value })}
+              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select
+              value={newAccount.account_type}
+              onChange={(e) => setNewAccount({ ...newAccount, account_type: e.target.value })}
+              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="">Select Account Type</option>
               <option value="saving">Saving</option>
               <option value="current">Current</option>
             </select>
-            <input type="number" placeholder="Balance" value={newAccount.balance} onChange={(e) => setNewAccount({ ...newAccount, balance: parseFloat(e.target.value) })} className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input
+              type="number"
+              placeholder="Balance"
+              value={newAccount.balance}
+              onChange={(e) => setNewAccount({ ...newAccount, balance: parseFloat(e.target.value) })}
+              className="bg-gray-700 text-white rounded-md px-2 py-1 mb-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <button onClick={createAccount} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Account</button>
           </div>
         </div>
@@ -547,38 +615,39 @@ const FinanceData = () => {
         {/* Transactions */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-white">Transactions</h3>
-          {accounts.length > 0 ? (
+          {accountList.length > 0 ? (
             <div className="bg-white/10 p-4 rounded-lg">
               <h4 className="text-white font-semibold mb-2">Select Account for Transactions</h4>
               <select
-                onChange={(e) => fetchTransactions(e.target.value, localStorage.getItem('token'))}
+                onChange={(e) => fetchTransactions(e.target.value)}
                 className="w-full bg-gray-700 text-white rounded-md px-2 py-1 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="" className="bg-gray-700 text-white">-- Select an Account --</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id} className="bg-gray-700 text-white">{acc.account_name} (...{acc.account_number ? acc.account_number.slice(-4) : ''})</option>
+                {accountList.map((acc) => (
+                  <option key={acc.id} value={acc.id} className="bg-gray-700 text-white">
+                    {acc.account_name} (...{acc.account_number ? acc.account_number.slice(-4) : ''})
+                  </option>
                 ))}
               </select>
 
-              {transactions.slice(0, 10).map(tx => (
+              {transactionList.slice(0, 10).map((tx) => (
                 <div key={tx.id} className="flex justify-between items-center mt-2">
                   <div>
                     <p className="text-white font-semibold">{tx.description} ({tx.date})</p>
                     <p className="text-gray-300 text-sm">Amount: {tx.amount}</p>
                   </div>
                   <div>
-                    <button onClick={() => deleteTransaction(tx.id, tx.account_id)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => deleteTransactionViaAPI(tx.id, selectedAccountId)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
-              {transactions.length > 10 && (
+              {transactionList.length > 10 && (
                 <div className="text-center mt-4">
                   <button onClick={() => navigate('/all-transactions')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                     Read More
                   </button>
                 </div>
               )}
-              {/* File Upload Section */}
               <div className="bg-white/10 p-4 rounded-lg mt-4">
                 <h4 className="text-white font-semibold mb-2">Upload Transactions (Excel/PDF)</h4>
                 <input
