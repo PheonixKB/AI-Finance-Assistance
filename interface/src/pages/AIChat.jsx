@@ -29,7 +29,7 @@ const AIChat = () => {
   const fetchChatSessions = async (user) => {
     if (!apiService.auth.isAuthenticated() || !user) return;
     try {
-      const sessions = await chat.getSessions(user);
+      const sessions = await chat.getSessions();
       setChatSessions(sessions);
       if (sessions.length > 0 && !sessionId) {
         handleSessionClick(sessions[0].id, sessions[0].title);
@@ -53,22 +53,19 @@ const AIChat = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = apiService.auth.decodeToken();
-        const user = decodedToken?.username || 'User';
-        setUsername(user);
-        initialLoadRef.current = false;
-        fetchChatSessions(user);
-      } catch (err) {
-        console.error('Error decoding token:', err);
-        localStorage.removeItem('token');
+    let cancelled = false;
+    apiService.auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
         navigate('/signin');
+        return;
       }
-    } else {
-      navigate('/signin');
-    }
+      if (!cancelled) {
+        setUsername('User');
+        initialLoadRef.current = false;
+        fetchChatSessions('User');
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const handleSendMessage = async () => {

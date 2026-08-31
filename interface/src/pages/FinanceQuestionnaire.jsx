@@ -32,9 +32,9 @@ const FinanceQuestionnaire = () => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setMessage({ type: 'error', text: 'Authentication token not found. Please log in again.' });
+    const isAuth = await auth.isAuthenticated();
+    if (!isAuth) {
+      setMessage({ type: 'error', text: 'Authentication required. Please log in again.' });
       navigate('/signin');
       return;
     }

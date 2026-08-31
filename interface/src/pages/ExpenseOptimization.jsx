@@ -17,47 +17,46 @@ const ExpenseOptimization = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decoded = auth.decodeToken();
-    if (!decoded) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decoded.username || 'User');
-
-    const fetchBudget = async () => {
-      setLoading(true);
-      try {
-        const data = await content.getBudgetSummary();
-        setBudgetSummary(data);
-
-        if (data.categorized_expenses && data.categorized_expenses.length > 0) {
-          const labels = data.categorized_expenses.map((exp) => exp.category);
-          const totals = data.categorized_expenses.map((exp) => exp.total_spent);
-          setChartData({
-            labels,
-            datasets: [
-              {
-                data: totals,
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-                hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-              },
-            ],
-          });
-        }
-      } catch (err) {
-        setError(err.message || 'Failed to load budget data');
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
       }
-    };
+      if (!cancelled) {
+        setUsername('User');
+        const fetchBudget = async () => {
+          setLoading(true);
+          try {
+            const data = await content.getBudgetSummary();
+            if (!cancelled) {
+              setBudgetSummary(data);
+              if (data.categorized_expenses && data.categorized_expenses.length > 0) {
+                const labels = data.categorized_expenses.map((exp) => exp.category);
+                const totals = data.categorized_expenses.map((exp) => exp.total_spent);
+                setChartData({
+                  labels,
+                  datasets: [
+                    {
+                      data: totals,
+                      backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                      hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                    },
+                  ],
+                });
+              }
+            }
+          } catch (err) {
+            if (!cancelled) setError(err.message || 'Failed to load budget data');
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
+        };
 
-    fetchBudget();
+        fetchBudget();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   if (loading) {

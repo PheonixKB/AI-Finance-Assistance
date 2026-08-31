@@ -12,35 +12,32 @@ const BillManagement = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decoded = auth.decodeToken();
-    if (!decoded) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decoded.username || 'User');
-
-    const fetchBills = async () => {
-      setLoading(true);
-      try {
-        const data = await transactions.getAll();
-        const bills = data.filter(
-          (tx) => tx.category && tx.category.toLowerCase().includes('bill')
-        );
-        setBillTransactions(bills);
-      } catch (err) {
-        setError(err.message || 'Failed to load bills');
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
       }
-    };
-
-    fetchBills();
+      if (!cancelled) {
+        setUsername('User');
+        const fetchBills = async () => {
+          setLoading(true);
+          try {
+            const data = await transactions.getAll();
+            const bills = data.filter(
+              (tx) => tx.category && tx.category.toLowerCase().includes('bill')
+            );
+            if (!cancelled) setBillTransactions(bills);
+          } catch (err) {
+            if (!cancelled) setError(err.message || 'Failed to load bills');
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
+        };
+        fetchBills();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   if (loading) {

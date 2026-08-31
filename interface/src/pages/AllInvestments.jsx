@@ -25,19 +25,18 @@ const AllInvestments = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decodedToken = auth.decodeToken();
-    if (!decodedToken) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decodedToken.username || 'User');
-    fetchInvestments();
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
+      }
+      if (!cancelled) {
+        setUsername('User');
+        fetchInvestments();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   if (loading) {

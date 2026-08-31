@@ -19,41 +19,40 @@ const WealthAnalytics = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decoded = auth.decodeToken();
-    if (!decoded) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decoded.username || 'User');
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [accData, invData, summaryData, profileData] = await Promise.allSettled([
-          accounts.getAll(),
-          investments.getAll(),
-          summaryFinance.get(),
-          financeProfile.get(),
-        ]);
-
-        if (accData.status === 'fulfilled') setAccountsList(accData.value || []);
-        if (invData.status === 'fulfilled') setInvestmentsList(invData.value || []);
-        if (summaryData.status === 'fulfilled') setSummary(summaryData.value || {});
-        if (profileData.status === 'fulfilled') setProfile(profileData.value || {});
-      } catch (err) {
-        setError(err.message || 'Failed to load wealth data');
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
       }
-    };
+      if (!cancelled) {
+        setUsername('User');
+        const fetchData = async () => {
+          setLoading(true);
+          try {
+            const [accData, invData, summaryData, profileData] = await Promise.allSettled([
+              accounts.getAll(),
+              investments.getAll(),
+              summaryFinance.get(),
+              financeProfile.get(),
+            ]);
+            if (!cancelled) {
+              if (accData.status === 'fulfilled') setAccountsList(accData.value || []);
+              if (invData.status === 'fulfilled') setInvestmentsList(invData.value || []);
+              if (summaryData.status === 'fulfilled') setSummary(summaryData.value || {});
+              if (profileData.status === 'fulfilled') setProfile(profileData.value || {});
+            }
+          } catch (err) {
+            if (!cancelled) setError(err.message || 'Failed to load wealth data');
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
+        };
 
-    fetchData();
+        fetchData();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const totalAccountBalance = accountsList.reduce(

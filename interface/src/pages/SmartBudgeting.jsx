@@ -47,19 +47,18 @@ const SmartBudgeting = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decodedToken = auth.decodeToken();
-    if (!decodedToken) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decodedToken.username || 'User');
-    fetchBudgetSummary();
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
+      }
+      if (!cancelled) {
+        setUsername('User');
+        fetchBudgetSummary();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   if (loading) {

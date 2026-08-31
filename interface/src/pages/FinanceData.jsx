@@ -234,7 +234,7 @@ const FinanceData = () => {
       const data = await upload.transactions(selectedFile);
       setMessage({ type: 'success', text: data.message || 'Transactions uploaded successfully!' });
       setSelectedFile(null);
-      fetchTransactions(selectedAccountId, localStorage.getItem('token'));
+      fetchTransactions(selectedAccountId);
     } catch (error) {
       console.error('Error uploading transactions:', error);
       setMessage({ type: 'error', text: error.message });
@@ -300,24 +300,23 @@ const FinanceData = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decodedToken = auth.decodeToken();
-    if (!decodedToken) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decodedToken.username || 'User');
-    fetchSummaryFinance();
-    fetchInvestments();
-    fetchAccounts();
-    fetchBudgetSummary();
-    fetchInvestmentInsights();
-    fetchGoals();
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
+      }
+      if (!cancelled) {
+        setUsername('User');
+        fetchSummaryFinance();
+        fetchInvestments();
+        fetchAccounts();
+        fetchBudgetSummary();
+        fetchInvestmentInsights();
+        fetchGoals();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const deleteTransactionViaAPI = async (id, accountId) => {

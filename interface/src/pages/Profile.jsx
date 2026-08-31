@@ -32,7 +32,7 @@ const Profile = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const navigate = useNavigate();
 
-  const fetchFinanceProfile = async (token) => {
+  const fetchFinanceProfile = async () => {
     try {
       const data = await financeProfile.get();
       setFinanceProfile(data);
@@ -59,28 +59,21 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = auth.decodeToken();
-        if (!decodedToken) {
-          localStorage.removeItem('token');
-          navigate('/signin');
-          return;
-        }
-        setUsername(decodedToken.username || 'User');
-        setEmail(decodedToken.sub || '');
-        setEditedUsername(decodedToken.username || 'User');
-        fetchFinanceProfile(token);
-        fetchPermissions();
-      } catch (error) {
-        console.error('Error decoding token:', error);
-        localStorage.removeItem('token');
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
         navigate('/signin');
+        return;
       }
-    } else {
-      navigate('/signin');
-    }
+      if (!cancelled) {
+        setUsername('User');
+        setEmail('');
+        setEditedUsername('User');
+        fetchFinanceProfile();
+        fetchPermissions();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const handleUpdateUsername = async () => {
@@ -95,7 +88,6 @@ const Profile = () => {
 
     try {
       const data = await auth.updateUser(editedUsername);
-      localStorage.setItem('token', data.access_token);
       setUsername(data.username);
       setMessage({ type: 'success', text: 'Username updated successfully!' });
       setIsEditingUsername(false);

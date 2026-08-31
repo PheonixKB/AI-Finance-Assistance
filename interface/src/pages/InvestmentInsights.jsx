@@ -13,37 +13,39 @@ const InvestmentInsights = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decoded = auth.decodeToken();
-    if (!decoded) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decoded.username || 'User');
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [insightsData, invData] = await Promise.all([
-          content.getInvestmentInsights(),
-          investments.getAll(),
-        ]);
-        setInsights(insightsData);
-        setUserInvestments(invData);
-      } catch (err) {
-        setError(err.message || 'Failed to load data');
-        console.error('Error:', err);
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
       }
-    };
-
-    fetchData();
+      if (!cancelled) {
+        setUsername('User');
+        const fetchData = async () => {
+          setLoading(true);
+          try {
+            const [insightsData, invData] = await Promise.all([
+              content.getInvestmentInsights(),
+              investments.getAll(),
+            ]);
+            if (!cancelled) {
+              setInsights(insightsData);
+              setUserInvestments(invData);
+            }
+          } catch (err) {
+            if (!cancelled) {
+              setError(err.message || 'Failed to load insights');
+            }
+          } finally {
+            if (!cancelled) {
+              setLoading(false);
+            }
+          }
+        };
+        fetchData();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   if (loading) {

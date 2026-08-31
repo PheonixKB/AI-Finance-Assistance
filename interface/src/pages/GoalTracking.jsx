@@ -13,33 +13,29 @@ const GoalTracking = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/signin');
-      return;
-    }
-    const decoded = auth.decodeToken();
-    if (!decoded) {
-      localStorage.removeItem('token');
-      navigate('/signin');
-      return;
-    }
-    setUsername(decoded.username || 'User');
-
-    const fetchGoals = async () => {
-      setLoading(true);
-      try {
-        const data = await goals.getAll();
-        setGoalList(data);
-      } catch (err) {
-        setError(err.message || 'Failed to load goals');
-        console.error('Error:', err);
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        navigate('/signin');
+        return;
       }
-    };
-
-    fetchGoals();
+      if (!cancelled) {
+        setUsername('User');
+        const fetchGoals = async () => {
+          setLoading(true);
+          try {
+            const data = await goals.getAll();
+            if (!cancelled) setGoalList(data);
+          } catch (err) {
+            if (!cancelled) setError(err.message || 'Failed to load goals');
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
+        };
+        fetchGoals();
+      }
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const handleGoalClick = async (goalId) => {
