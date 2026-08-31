@@ -40,6 +40,9 @@ async def correlation_id_middleware(request: Request, call_next):
     request_id_var.set(correlation_id)
     response = await call_next(request)
     response.headers["X-Correlation-ID"] = correlation_id
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:*; frame-ancestors 'none';")
     return response
 
 # Define allowed origins for CORS (Cross-Origin Resource Sharing)
@@ -56,8 +59,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,          # Allow requests from the defined origins
     allow_credentials=True,         # Allow cookies to be included in cross-origin requests
-    allow_methods=["*"],            # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],            # Allow all headers in cross-origin requests
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Restrict to needed methods
+    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],  # Restrict headers
 )
 
 # Include API routers into the main application

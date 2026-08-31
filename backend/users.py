@@ -1,10 +1,12 @@
 import os
 import datetime
 import secrets
+import hashlib
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, EmailStr, validator
 from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import jwt, JWTError
@@ -29,10 +31,36 @@ login_attempts = {}
 LOGIN_RATE_LIMIT = 5
 LOGIN_RATE_LIMIT_WINDOW = 5 * 60
 
+upload_attempts = {}
+UPLOAD_RATE_LIMIT = 5
+UPLOAD_RATE_LIMIT_WINDOW = 60
+
 # Configuration for JWT (JSON Web Token)
-SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
+REFRESH_SECRET_KEY = os.environ.get("REFRESH_SECRET_KEY", SECRET_KEY)
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+def set_auth_cookies(response, access_token: str, refresh_token: str):
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=os.environ.get("COOKIE_SECURE", "false").lower() == "true",
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=os.environ.get("COOKIE_SECURE", "false").lower() == "true",
+        samesite="lax",
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+    )
 
 # Configuration for SendGrid email service
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
@@ -44,12 +72,27 @@ class UserCreate(BaseModel):
     username: str
     password: str
 
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one number')
+        if not any(c in '!@#$%^&*()_+-=[]{}|;:,.<>?' for c in v):
+            raise ValueError('Password must contain at least one special character')
+        return v
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
 class UserUpdate(BaseModel):
     username: str
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 # Dependency to decode JWT and return the current user
 def get_current_user(request: Request):
@@ -80,6 +123,58 @@ def get_current_user(request: Request):
         return None
     except Exception:
         return None
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+def create_refresh_token(user_id: int) -> str:
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hash_refresh_token(raw_token)
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (%s, %s, %s)",
+            (user_id, token_hash, expires_at)
+        )
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+    return raw_token
+
+def verify_refresh_token(raw_token: str) -> dict | None:
+    token_hash = hash_refresh_token(raw_token)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT id, user_id, expires_at FROM refresh_tokens WHERE token_hash=%s",
+            (token_hash,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        if datetime.datetime.now(datetime.timezone.utc) > row["expires_at"].replace(tzinfo=datetime.timezone.utc):
+            return None
+        return row
+    finally:
+        cursor.close()
+        conn.close()
+
+def revoke_refresh_token(raw_token: str):
+    token_hash = hash_refresh_token(raw_token)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM refresh_tokens WHERE token_hash=%s", (token_hash,))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
 
 # API endpoint to update the current user's information
 @router.put("/me")
@@ -182,7 +277,16 @@ async def register(user: UserCreate):
             "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         }, SECRET_KEY, algorithm=ALGORITHM)
 
-        return {"message": "registered", "email": user.email, "username": user.username, "access_token": token, "token_type": "bearer"}
+        refresh_token = create_refresh_token(user_id)
+
+        response = JSONResponse({
+            "message": "registered",
+            "email": user.email,
+            "username": user.username,
+            "token_type": "bearer"
+        })
+        set_auth_cookies(response, token, refresh_token)
+        return response
     finally:
         cursor.close()
         conn.close()
@@ -229,7 +333,61 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Reque
             "username": user["username"],
             "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         }, SECRET_KEY, algorithm=ALGORITHM)
-        return {"access_token": token, "token_type": "bearer"}
+
+        refresh_token = create_refresh_token(user["id"])
+
+        response = JSONResponse({
+            "token_type": "bearer"
+        })
+        set_auth_cookies(response, token, refresh_token)
+        return response
     finally:
         cursor.close()
         conn.close()
+
+# API endpoint to refresh access token
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+@router.post("/refresh")
+async def refresh_token_endpoint(payload: RefreshRequest):
+    token_row = verify_refresh_token(payload.refresh_token)
+    if not token_row:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT email, username FROM users WHERE id=%s", (token_row["user_id"],))
+        user = cursor.fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+    finally:
+        cursor.close()
+        conn.close()
+
+    new_access_token = jwt.encode({
+        "sub": user["email"],
+        "username": user["username"],
+        "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    }, SECRET_KEY, algorithm=ALGORITHM)
+
+    new_refresh_token = create_refresh_token(user["id"])
+    revoke_refresh_token(payload.refresh_token)
+
+    response = JSONResponse({
+        "token_type": "bearer"
+    })
+    set_auth_cookies(response, new_access_token, new_refresh_token)
+    return response
+
+@router.post("/logout")
+async def logout(request: Request):
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        revoke_refresh_token(refresh_token)
+    response = JSONResponse({"message": "Logged out successfully"})
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return response
