@@ -42,6 +42,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_SECRET_KEY = os.environ.get("REFRESH_SECRET_KEY", SECRET_KEY)
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
 
 def set_auth_cookies(response, access_token: str, refresh_token: str):
     response.set_cookie(
@@ -379,3 +380,144 @@ async def logout(request: Request):
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
     return response
+
+
+# -------------------- PASSWORD RESET --------------------
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+    @validator('new_password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one number')
+        if not any(c in '!@#$%^&*()_+-=[]{}|;:,.<>?' for c in v):
+            raise ValueError('Password must contain at least one special character')
+        return v
+
+
+def create_password_reset_token(user_id: int) -> str:
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (%s, %s, %s)",
+            (user_id, token_hash, expires_at)
+        )
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+    return raw_token
+
+
+def verify_password_reset_token(raw_token: str) -> dict | None:
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token_hash=%s",
+            (token_hash,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        if row["used"]:
+            return None
+        if datetime.datetime.now(datetime.timezone.utc) > row["expires_at"].replace(tzinfo=datetime.timezone.utc):
+            return None
+        return row
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def mark_password_reset_token_used(raw_token: str):
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE password_reset_tokens SET used=TRUE WHERE token_hash=%s", (token_hash,))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id, email, username FROM users WHERE email=%s", (payload.email,))
+        user = cursor.fetchone()
+        if not user:
+            return {"message": "If an account with that email exists, a password reset link has been sent."}
+    finally:
+        cursor.close()
+        conn.close()
+
+    reset_token = create_password_reset_token(user["id"])
+
+    reset_link = f"{BACKEND_URL}/reset-password?token={reset_token}"
+    email_body = f"""
+    <p>Hello {user['username']},</p>
+    <p>Click the link below to reset your password:</p>
+    <p><a href="{reset_link}">Reset Password</a></p>
+    <p>This link will expire in 1 hour.</p>
+    <p>If you did not request this, please ignore this email.</p>
+    """
+
+    if sendgrid and SENDGRID_API_KEY and SENDER_EMAIL:
+        try:
+            message = Mail(
+                from_email=SENDER_EMAIL,
+                to_emails=user["email"],
+                subject="Password Reset Request",
+                html_content=email_body,
+            )
+            sg = sendgrid.SendGridAPIClient(SENDGRID_API_KEY)
+            sg.send(message)
+            logger.info("Password reset email sent to %s", user["email"])
+        except Exception as e:
+            logger.error("Error sending password reset email to %s: %s", user["email"], e)
+    else:
+        logger.info("Password reset token for %s: %s (SendGrid not configured)", user["email"], reset_link)
+
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest):
+    token_row = verify_password_reset_token(payload.token)
+    if not token_row:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    hashed = pwd_context.hash(payload.new_password)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE users SET password_hash=%s WHERE id=%s", (hashed, token_row["user_id"]))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+    mark_password_reset_token_used(payload.token)
+
+    return {"message": "Password reset successful"}

@@ -84,6 +84,18 @@ const auth = {
   logout: async () => {
     await request('/api/v1/logout', { method: 'POST' });
   },
+  forgotPassword: async (email) => {
+    return request('/api/v1/forgot-password', {
+      method: 'POST',
+      body: { email },
+    });
+  },
+  resetPassword: async (token, newPassword) => {
+    return request('/api/v1/reset-password', {
+      method: 'POST',
+      body: { token, new_password: newPassword },
+    });
+  },
   decodeToken: () => {
     return null;
   },
