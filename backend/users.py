@@ -10,6 +10,7 @@ from pydantic import BaseModel, EmailStr, validator
 from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import jwt, JWTError
+from rate_limiter import check_rate_limit
 from db import get_db_connection
 
 logger = logging.getLogger(__name__)
@@ -27,11 +28,9 @@ load_dotenv() # Load environment variables from .env file
 router = APIRouter() # Initialize FastAPI router for user-related routes
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # Password hashing context
 
-login_attempts = {}
 LOGIN_RATE_LIMIT = 5
 LOGIN_RATE_LIMIT_WINDOW = 5 * 60
 
-upload_attempts = {}
 UPLOAD_RATE_LIMIT = 5
 UPLOAD_RATE_LIMIT_WINDOW = 60
 
@@ -295,17 +294,9 @@ async def register(user: UserCreate):
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = None):
     client_ip = request.client.host if request else "unknown"
-    now_ts = datetime.datetime.now().timestamp()
+    login_key = f"login:{client_ip}"
 
-    if client_ip not in login_attempts:
-        login_attempts[client_ip] = []
-
-    login_attempts[client_ip] = [
-        ts for ts in login_attempts[client_ip]
-        if now_ts - ts < LOGIN_RATE_LIMIT_WINDOW
-    ]
-
-    if len(login_attempts[client_ip]) >= LOGIN_RATE_LIMIT:
+    if not check_rate_limit(login_key, LOGIN_RATE_LIMIT, LOGIN_RATE_LIMIT_WINDOW):
         raise HTTPException(
             status_code=429,
             detail="Too many login attempts. Please try again later.",
@@ -322,10 +313,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Reque
         user = cursor.fetchone()
         # Verify user existence and password
         if not user or not pwd_context.verify(form_data.password, user["password_hash"]):
-            login_attempts[client_ip].append(now_ts)
             raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        login_attempts[client_ip] = []
         
         # Encode JWT token with user's email and username
         token = jwt.encode({

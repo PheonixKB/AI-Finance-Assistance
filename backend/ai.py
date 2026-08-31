@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from users import get_current_user
 from permissions import get_user_permissions
 from db import get_db_connection
+from rate_limiter import check_rate_limit
 
 try:
     from openai import OpenAI, APIError
@@ -32,6 +33,8 @@ def get_openai_client():
 free_ai_requests = {}
 FREE_AI_LIMIT = 5
 AUTHENTICATED_AI_LIMIT = 50
+
+# Redis-backed rate limiting is used via rate_limiter.check_rate_limit
 
 # -------------------------------------------------------------------
 # Schema
@@ -99,16 +102,8 @@ async def ask_finance_assistant(item: QueryModel, request: Request):
     # -------------------- FREE LIMIT --------------------
     if not user_id:
         client_ip = request.client.host
-        if client_ip not in free_ai_requests:
-            free_ai_requests[client_ip] = {"count": 0, "last_reset": today}
-
-        if free_ai_requests[client_ip]["last_reset"] != today:
-            free_ai_requests[client_ip]["count"] = 0
-            free_ai_requests[client_ip]["last_reset"] = today
-
-        if free_ai_requests[client_ip]["count"] >= FREE_AI_LIMIT:
+        if not check_rate_limit(f"ai:free:{client_ip}", FREE_AI_LIMIT, 24 * 60 * 60):
             raise HTTPException(status_code=429, detail="Free AI limit exceeded. Sign in for more access.")
-        free_ai_requests[client_ip]["count"] += 1
     # -------------------- AUTH LIMIT --------------------
     else:
         conn = get_db_connection()
