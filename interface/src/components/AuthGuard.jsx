@@ -1,22 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import { auth } from '../apiService';
 
 const AuthGuard = ({ children }) => {
-  const token = localStorage.getItem('token');
+  const [checking, setChecking] = useState(true);
+  const [authed, setAuthed] = useState(false);
 
-  if (!token) {
-    return <Navigate to="/signin" replace />;
+  useEffect(() => {
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled) {
+        setAuthed(ok);
+        setChecking(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
   }
 
-  try {
-    const decoded = jwtDecode(token);
-    if (decoded.exp && Date.now() >= decoded.exp * 1000) {
-      localStorage.removeItem('token');
-      return <Navigate to="/signin" replace />;
-    }
-  } catch {
-    localStorage.removeItem('token');
+  if (!authed) {
     return <Navigate to="/signin" replace />;
   }
 

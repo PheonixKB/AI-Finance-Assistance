@@ -3,24 +3,10 @@ import { jwtDecode } from 'jwt-decode';
 const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) ||
   'http://localhost:8000';
 
-const getToken = () => localStorage.getItem('token');
-
-const getHeaders = (contentType = 'application/json') => {
-  const headers = {};
-  const token = getToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  if (contentType) {
-    headers['Content-Type'] = contentType;
-  }
-  return headers;
-};
-
 const request = async (path, options = {}) => {
   const url = `${BASE_URL}${path}`;
   const config = {
-    headers: getHeaders(),
+    credentials: 'include',
     ...options,
   };
   if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
@@ -29,7 +15,6 @@ const request = async (path, options = {}) => {
   const response = await fetch(url, config);
   if (!response.ok) {
     if (response.status === 401) {
-      localStorage.removeItem('token');
       window.location.href = '/signin';
     }
     const genericMessages = {
@@ -69,6 +54,7 @@ const auth = {
     params.append('password', password);
     const response = await fetch(`${BASE_URL}/api/v1/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params,
     });
@@ -78,9 +64,7 @@ const auth = {
       error.status = response.status;
       throw error;
     }
-    const data = await response.json();
-    localStorage.setItem('token', data.access_token);
-    return data;
+    return await response.json();
   },
   register: async (username, email, password) => {
     return request('/api/v1/register', {
@@ -97,24 +81,16 @@ const auth = {
   deleteUser: async () => {
     return request('/api/v1/me', { method: 'DELETE' });
   },
-  logout: () => {
-    localStorage.removeItem('token');
+  logout: async () => {
+    await request('/api/v1/logout', { method: 'POST' });
   },
   decodeToken: () => {
-    const token = getToken();
-    if (!token) return null;
-    try {
-      return jwtDecode(token);
-    } catch {
-      return null;
-    }
+    return null;
   },
-  isAuthenticated: () => {
-    const token = getToken();
-    if (!token) return false;
+  isAuthenticated: async () => {
     try {
-      const decoded = jwtDecode(token);
-      return !!decoded.sub;
+      const response = await request('/api/v1/me');
+      return !!response;
     } catch {
       return false;
     }
@@ -131,7 +107,7 @@ const chat = {
     body: { session_id, sender, text },
   }),
   getMessages: (session_id) => request(`/api/v1/chat/messages/${session_id}`),
-  getSessions: (username) => request(`/api/v1/chat/sessions/${username}`),
+  getSessions: () => request(`/api/v1/chat/sessions`),
   updateTitle: (session_id, title) => request(`/api/v1/chat/sessions/${session_id}/title`, {
     method: 'PUT',
     body: { title },
@@ -234,17 +210,12 @@ const upload = {
   transactions: async (file, account_id = null) => {
     const formData = new FormData();
     formData.append('file', file);
-    const headers = {};
     if (account_id) {
       formData.append('account_id', account_id);
     }
-    const token = getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
     const response = await fetch(`${BASE_URL}/api/v1/upload/transactions`, {
       method: 'POST',
-      headers,
+      credentials: 'include',
       body: formData,
     });
     if (!response.ok) {
@@ -263,14 +234,9 @@ const upload = {
   investments: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const headers = {};
-    const token = getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
     const response = await fetch(`${BASE_URL}/api/v1/upload/investments`, {
       method: 'POST',
-      headers,
+      credentials: 'include',
       body: formData,
     });
     if (!response.ok) {
