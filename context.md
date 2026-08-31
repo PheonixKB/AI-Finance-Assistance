@@ -59,7 +59,7 @@
 | 2 | Add file malware scanning for uploads | Medium | Done |
 | 3 | Add finance profile required field validation | Medium | Done |
 | 4 | Fix transaction amount normalization edge cases | Medium | Done |
-| 5 | Add password reset flow | P1 | Pending |
+| 5 | Add password reset flow | P1 | Done |
 | 6 | Add account lockout after failed login attempts | P2 | Pending |
 | 7 | Dockerize application | P0 | Pending |
 | 8 | SOC 2 / GDPR compliance | P1 | Pending |
@@ -69,18 +69,17 @@
 ## Current Branch Status
 
 **Branch:** `main`  
-**Ahead of origin:** 19 commits  
-**Last commit:** `70b12c6` - feat: migrate rate limiting to Redis with in-memory fallback
+**Ahead of origin:** 22 commits  
+**Last commit:** `9d392dc` - feat: add password reset flow
 
 ### Recent Commits
 ```
+9d392dc feat: add password reset flow
+4e592cf docs: update context.md with file scanning completion
+ab78d98 feat: add file malware scanning for uploads
+0c1eed5 fix: transaction amount normalization edge cases
+a757758 feat: add finance profile required field validation
 70b12c6 feat: migrate rate limiting to Redis with in-memory fallback
-5c5d185 refactor: update Header/Hero auth checks and fix frontend tests
-4b8bcd8 refactor: replace localStorage token checks with auth.isAuthenticated() in all pages
-c4004ab feat: migrate frontend auth from localStorage JWT to HttpOnly cookies
-e2aa857 fix: chat auth bypass, content route errors, upload request param, tests
-f31c7bd security: harden JWT, add refresh tokens, password complexity, CSP, upload rate limit
-...
 ```
 
 ---
@@ -89,7 +88,7 @@ f31c7bd security: harden JWT, add refresh tokens, password complexity, CSP, uplo
 
 | Suite | Result |
 |-------|--------|
-| Backend (pytest) | 51 passed ✅ |
+| Backend (pytest) | 56 passed ✅ |
 | Frontend (vitest) | 14 passed ✅ |
 | Frontend build | Succeeds ✅ |
 
