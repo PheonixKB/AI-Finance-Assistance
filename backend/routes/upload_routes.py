@@ -11,17 +11,40 @@ from ai import get_openai_client
 router = APIRouter(prefix="/upload", tags=["Upload"])
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+upload_attempts = {}
+UPLOAD_RATE_LIMIT = 5
+UPLOAD_RATE_LIMIT_WINDOW = 60
+
+def check_upload_rate_limit(client_ip: str):
+    now_ts = datetime.datetime.now().timestamp()
+    if client_ip not in upload_attempts:
+        upload_attempts[client_ip] = []
+
+    upload_attempts[client_ip] = [
+        ts for ts in upload_attempts[client_ip]
+        if now_ts - ts < UPLOAD_RATE_LIMIT_WINDOW
+    ]
+
+    if len(upload_attempts[client_ip]) >= UPLOAD_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many uploads. Please wait a minute and try again.",
+        )
+
+    upload_attempts[client_ip].append(now_ts)
 
 @router.post("/transactions")
 async def upload_transactions(
     file: UploadFile = File(...),
     account_id: int = None,
+    request: Request = None,
     current_user: dict = Depends(get_current_user)
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required to upload transactions")
 
     user_id = current_user["id"]
+    check_upload_rate_limit(request.client.host if request else "unknown")
 
     # Validate file type
     allowed_types = [
@@ -185,6 +208,7 @@ async def upload_investments(
         raise HTTPException(status_code=401, detail="Authentication required to upload investments")
 
     user_id = current_user["id"]
+    check_upload_rate_limit(request.client.host if request else "unknown")
 
     # Validate file type
     if file.content_type not in [

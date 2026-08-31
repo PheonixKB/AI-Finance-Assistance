@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import date
-from openai import RateLimitError
+from openai import RateLimitError, APIError
 
 from users import get_current_user
 from db import get_db_connection
@@ -491,10 +491,10 @@ async def get_budget_summary(request: Request):
                     ]
                 )
                 suggestions = response.choices[0].message.content.strip()
-            except RateLimitError:
+            except (RateLimitError, APIError):
                 return JSONResponse(
                     status_code=429,
-                    content={"error": "AI service unavailable: OpenAI quota exceeded. Please try again later."}
+                    content={"error": "AI service unavailable: OpenAI quota exceeded or service error. Please try again later."}
                 )
         else:
             suggestions = "Please upload more transaction data and set your salary in the finance profile to get personalized budget suggestions."
@@ -578,9 +578,6 @@ async def get_investment_insights(request: Request):
         }
 
     finally:
-        cursor.close()
-        conn.close()
-
         cursor.close()
         conn.close()
 
@@ -717,7 +714,7 @@ async def get_goal_progress(goal_id: int, request: Request):
                 ]
             )
             ai_suggestion = response.choices[0].message.content.strip()
-        except RateLimitError:
+        except (RateLimitError, APIError):
             ai_suggestion = "AI service currently unavailable. Try again later."
 
         return {

@@ -71,18 +71,16 @@ def get_session_messages(session_id: int, request: Request):
         cursor.close()
         conn.close()
 
-# Fetch sessions by username
-@router.get("/sessions/{username}")
-def get_user_sessions_by_username(username: str, request: Request):
+# Fetch sessions for current user
+@router.get("/sessions")
+def get_user_sessions(request: Request):
     current_user = get_current_user(request)
-    if username != current_user["username"]:
-        raise HTTPException(status_code=403, detail="You can only view your own sessions")
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT id, title, created_at FROM chat_sessions WHERE user_id = (SELECT id FROM users WHERE username=%s)",
-            (username,)
+            "SELECT id, title, created_at FROM chat_sessions WHERE user_id = %s",
+            (current_user["id"],)
         )
         return cursor.fetchall()
     finally:

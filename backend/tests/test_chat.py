@@ -118,16 +118,22 @@ class TestChatRoutes:
 
     @patch('routes.chat_routes.get_current_user')
     @patch('routes.chat_routes.get_db_connection')
-    def test_get_user_sessions_denies_other_username(self, mock_get_conn, mock_get_user):
+    def test_get_user_sessions_returns_own_sessions(self, mock_get_conn, mock_get_user):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            {"id": 1, "title": "Chat 1", "created_at": "2024-01-01T00:00:00"},
+            {"id": 2, "title": "Chat 2", "created_at": "2024-01-02T00:00:00"},
+        ]
         mock_conn.cursor.return_value = mock_cursor
         mock_get_conn.return_value = mock_conn
-        mock_get_user.return_value = {"id": 1, "email": "test@test.com", "username": "attacker"}
+        mock_get_user.return_value = {"id": 1, "email": "test@test.com", "username": "test"}
 
         from fastapi.testclient import TestClient
         from main import app
 
         client = TestClient(app)
-        response = client.get('/api/v1/chat/sessions/victim', headers={"Authorization": "Bearer fake-token"})
-        assert response.status_code == 403
+        response = client.get('/api/v1/chat/sessions', headers={"Authorization": "Bearer fake-token"})
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2

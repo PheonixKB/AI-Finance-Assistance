@@ -82,7 +82,7 @@ class TestModels:
 
     def test_user_create_model(self):
         from users import UserCreate
-        model = UserCreate(email="test@test.com", username="testuser", password="password123")
+        model = UserCreate(email="test@test.com", username="testuser", password="Password123!")
         assert model.email == "test@test.com"
         assert model.username == "testuser"
 
