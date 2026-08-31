@@ -6,6 +6,7 @@ import io
 from db import get_db_connection
 from users import get_current_user
 from rate_limiter import check_rate_limit
+from file_scanner import scan_uploaded_file
 from ai import get_openai_client
 
 router = APIRouter(prefix="/upload", tags=["Upload"])
@@ -51,6 +52,12 @@ async def upload_transactions(
 
     # Read file
     contents = await file.read()
+
+    # Scan for malicious content before parsing
+    is_safe, scan_error = scan_uploaded_file(file.filename or "", file.content_type or "", contents)
+    if not is_safe:
+        raise HTTPException(status_code=400, detail=scan_error)
+
     try:
         if file.content_type in ["text/csv", "application/csv"] or file.filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(contents))
@@ -222,6 +229,12 @@ async def upload_investments(
         raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024*1024)}MB.")
 
     contents = await file.read()
+
+    # Scan for malicious content before parsing
+    is_safe, scan_error = scan_uploaded_file(file.filename or "", file.content_type or "", contents)
+    if not is_safe:
+        raise HTTPException(status_code=400, detail=scan_error)
+
     investments_to_insert = []
 
     # --- Parse file into DataFrame ---
