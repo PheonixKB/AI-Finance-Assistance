@@ -72,7 +72,7 @@ class GoalUpdate(BaseModel):
     deadline: date | None = None
 
 class UserFinanceProfileCreate(BaseModel):
-    salary: float | None = None
+    salary: float
     monthly_debt_payments: float | None = None
     housing_cost: float | None = None
     transportation_cost: float | None = None
