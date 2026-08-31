@@ -17,57 +17,46 @@ describe('apiService', () => {
   });
 
   describe('auth.isAuthenticated', () => {
-    it('returns false when no token exists', async () => {
+    it('returns false when /api/v1/me returns 401', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 401,
+          json: () => Promise.resolve({ detail: 'Not authenticated' }),
+        })
+      );
       const { auth } = await import('../apiService');
-      expect(auth.isAuthenticated()).toBe(false);
+      expect(await auth.isAuthenticated()).toBe(false);
     });
 
-    it('returns false for an invalid token', async () => {
-      localStorage.setItem('token', 'invalid-token');
+    it('returns true when /api/v1/me returns 200', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ id: 1, email: 'test@test.com', username: 'test' }),
+        })
+      );
       const { auth } = await import('../apiService');
-      expect(auth.isAuthenticated()).toBe(false);
-    });
-
-    it('returns true for a valid token', async () => {
-      const fakeToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo5OTk5OTk5OTk5fQ.signature';
-      localStorage.setItem('token', fakeToken);
-      const { auth } = await import('../apiService');
-      expect(auth.isAuthenticated()).toBe(true);
+      expect(await auth.isAuthenticated()).toBe(true);
     });
   });
 
   describe('auth.logout', () => {
-    it('removes the token from localStorage', async () => {
-      localStorage.setItem('token', 'some-token');
+    it('calls /api/v1/logout endpoint', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ message: 'Logged out successfully' }),
+        })
+      );
       const { auth } = await import('../apiService');
-      auth.logout();
-      expect(localStorage.getItem('token')).toBeNull();
-    });
-  });
-
-  describe('auth.decodeToken', () => {
-    it('returns null when no token exists', async () => {
-      const { auth } = await import('../apiService');
-      expect(auth.decodeToken()).toBeNull();
-    });
-
-    it('decodes a valid token payload', async () => {
-      const fakeToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo5OTk5OTk5OTk5fQ.signature';
-      localStorage.setItem('token', fakeToken);
-      const { auth } = await import('../apiService');
-      const decoded = auth.decodeToken();
-      expect(decoded).not.toBeNull();
-      expect(decoded.username).toBe('testuser');
-      expect(decoded.sub).toBe('test@example.com');
-    });
-
-    it('detects expired token', async () => {
-      const expiredToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAwfQ.expired';
-      localStorage.setItem('token', expiredToken);
-      const { auth } = await import('../apiService');
-      const decoded = auth.decodeToken();
-      expect(decoded).not.toBeNull();
-      expect(decoded.exp).toBeLessThan(Date.now() / 1000);
+      await auth.logout();
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/logout'),
+        expect.objectContaining({ method: 'POST', credentials: 'include' })
+      );
     });
   });
 

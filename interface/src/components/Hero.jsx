@@ -62,15 +62,12 @@ const Hero = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = auth.decodeToken();
-        if (!decodedToken) {
-          localStorage.removeItem('token');
-          return;
-        }
-
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled && !ok) {
+        return;
+      }
+      if (!cancelled) {
         const fetchFinanceData = async () => {
           let monthlySpending = 0;
           let spendingChartData = [];
@@ -79,34 +76,39 @@ const Hero = () => {
 
           try {
             const profileData = await financeProfile.get();
-            savingsGoal = profileData.savings_goal || 0;
+            if (!cancelled) {
+              savingsGoal = profileData.savings_goal || 0;
+            }
           } catch (error) {
             console.error('Error fetching finance profile:', error);
+          }
           }
 
           try {
             const txList = await txApi.getAll();
             const { processedMonthlySpending, processedSpendingChartData, processedTotalSavings } = processTransactions(txList);
-            monthlySpending = processedMonthlySpending;
-            spendingChartData = processedSpendingChartData;
-            totalSavings = processedTotalSavings;
+            if (!cancelled) {
+              monthlySpending = processedMonthlySpending;
+              spendingChartData = processedSpendingChartData;
+              totalSavings = processedTotalSavings;
+            }
           } catch (error) {
             console.error('Error fetching transactions:', error);
           }
 
-          setData({
-            monthly_spending: monthlySpending,
-            spending_chart: spendingChartData,
-            savings_current: totalSavings,
-            savings_goal: savingsGoal,
-            ai_optimization: 12,
-          });
+          if (!cancelled) {
+            setData({
+              monthly_spending: monthlySpending,
+              spending_chart: spendingChartData,
+              savings_current: totalSavings,
+              savings_goal: savingsGoal,
+              ai_optimization: 12,
+            });
+          }
         };
-
         fetchFinanceData();
       } catch (error) {
         console.error('Error decoding token:', error);
-        localStorage.removeItem('token');
       }
     } else {
       setData({
@@ -117,6 +119,8 @@ const Hero = () => {
         ai_optimization: 12,
       });
     }
+    });
+    return () => { cancelled = true; };
   }, []);
 
   if (!data) {

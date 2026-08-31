@@ -9,18 +9,13 @@ const Header = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-
-    const handleStorageChange = () => {
-      const newToken = localStorage.getItem('token');
-      setIsLoggedIn(!!newToken);
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    let cancelled = false;
+    auth.isAuthenticated().then((ok) => {
+      if (!cancelled) {
+        setIsLoggedIn(ok);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
 
   const handleLogout = () => {

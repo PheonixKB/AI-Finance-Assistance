@@ -22,9 +22,17 @@ vi.mock('lucide-react', () => {
   return Object.fromEntries(icons.map((name) => [name, () => React.createElement('span', { dataTestId: name })]));
 });
 
-const setToken = () => {
-  const fakeToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJ0ZXN0IiwiZXhwIjo5OTk5OTk5OTk5fQ.signature';
-  localStorage.setItem('token', fakeToken);
+const mockAuth = () => {
+  vi.mock('../apiService', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+      ...actual,
+      auth: {
+        ...actual.auth,
+        isAuthenticated: () => Promise.resolve(true),
+      },
+    };
+  });
 };
 
 const setFetchMock = (data) => {
@@ -39,11 +47,10 @@ const setFetchMock = (data) => {
 describe('Missing pages exist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    mockAuth();
   });
 
   it('InvestmentInsights page renders without crashing', async () => {
-    setToken();
     setFetchMock({
       insights: 'Test insights',
       risk_tolerance: 'medium',
@@ -57,7 +64,6 @@ describe('Missing pages exist', () => {
   });
 
   it('GoalTracking page renders without crashing', async () => {
-    setToken();
     setFetchMock([]);
     const GoalTracking = (await import('../pages/GoalTracking')).default;
     const { container } = render(React.createElement(GoalTracking));
@@ -67,7 +73,6 @@ describe('Missing pages exist', () => {
   });
 
   it('ExpenseOptimization page renders without crashing', async () => {
-    setToken();
     setFetchMock({ categorized_expenses: [], salary: 5000 });
     const ExpenseOptimization = (await import('../pages/ExpenseOptimization')).default;
     const { container } = render(React.createElement(ExpenseOptimization));
@@ -77,7 +82,6 @@ describe('Missing pages exist', () => {
   });
 
   it('BillManagement page renders without crashing', async () => {
-    setToken();
     setFetchMock([]);
     const BillManagement = (await import('../pages/BillManagement')).default;
     const { container } = render(React.createElement(BillManagement));
@@ -87,7 +91,6 @@ describe('Missing pages exist', () => {
   });
 
   it('WealthAnalytics page renders without crashing', async () => {
-    setToken();
     setFetchMock([]);
     const WealthAnalytics = (await import('../pages/WealthAnalytics')).default;
     const { container } = render(React.createElement(WealthAnalytics));
