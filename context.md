@@ -57,8 +57,8 @@
 |---|-------|----------|--------|
 | 1 | Migrate to Redis for persistent rate limiting | Medium | Done |
 | 2 | Add file malware scanning for uploads | Medium | Pending |
-| 3 | Add finance profile required field validation | Medium | Pending |
-| 4 | Fix transaction amount normalization edge cases | Medium | Pending |
+| 3 | Add finance profile required field validation | Medium | Done |
+| 4 | Fix transaction amount normalization edge cases | Medium | Done |
 | 5 | Add password reset flow | P1 | Pending |
 | 6 | Add account lockout after failed login attempts | P2 | Pending |
 | 7 | Dockerize application | P0 | Pending |
@@ -89,7 +89,7 @@ f31c7bd security: harden JWT, add refresh tokens, password complexity, CSP, uplo
 
 | Suite | Result |
 |-------|--------|
-| Backend (pytest) | 41 passed ✅ |
+| Backend (pytest) | 46 passed ✅ |
 | Frontend (vitest) | 14 passed ✅ |
 | Frontend build | Succeeds ✅ |
 
