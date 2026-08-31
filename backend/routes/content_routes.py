@@ -60,6 +60,8 @@ class TransactionUpdate(BaseModel):
     description: str | None = None
     amount: float | None = None
 
+    model_config = {"extra": "allow"}
+
 class GoalCreate(BaseModel):
     goal_name: str
     target_amount: float
@@ -385,13 +387,17 @@ async def update_transaction(transaction_id: int, request: Request, transaction:
             for alt in synonyms:
                 if alt in raw_data and raw_data[alt] is not None:
                     normalized[key] = raw_data[alt]
-                    break  # stop at first match
+                    break
 
         # Compute amount if debit/credit pattern is detected
-        debit = raw_data.get("Debit ($)") or raw_data.get("Dr Amount") or raw_data.get("Withdrawal")
-        credit = raw_data.get("Credit ($)") or raw_data.get("Cr Amount") or raw_data.get("Deposit")
-        if debit or credit:
-            normalized["amount"] = float(credit or 0) - float(debit or 0)
+        debit_keys = ["Debit ($)", "Dr Amount", "Withdrawal"]
+        credit_keys = ["Credit ($)", "Cr Amount", "Deposit"]
+        debit = next((raw_data[k] for k in debit_keys if k in raw_data and raw_data[k] is not None), None)
+        credit = next((raw_data[k] for k in credit_keys if k in raw_data and raw_data[k] is not None), None)
+        if debit is not None or credit is not None:
+            debit_val = float(debit) if debit is not None else 0.0
+            credit_val = float(credit) if credit is not None else 0.0
+            normalized["amount"] = credit_val - debit_val
 
         # If nothing valid was found, bail early
         if not normalized:
