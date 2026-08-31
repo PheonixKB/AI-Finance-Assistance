@@ -55,7 +55,7 @@
 ### Remaining Issues from Audit
 | # | Issue | Priority | Status |
 |---|-------|----------|--------|
-| 1 | Migrate to Redis for persistent rate limiting | Medium | Pending |
+| 1 | Migrate to Redis for persistent rate limiting | Medium | Done |
 | 2 | Add file malware scanning for uploads | Medium | Pending |
 | 3 | Add finance profile required field validation | Medium | Pending |
 | 4 | Fix transaction amount normalization edge cases | Medium | Pending |
@@ -69,11 +69,12 @@
 ## Current Branch Status
 
 **Branch:** `main`  
-**Ahead of origin:** 18 commits  
-**Last commit:** `5c5d185` - refactor: update Header/Hero auth checks and fix frontend tests
+**Ahead of origin:** 19 commits  
+**Last commit:** `70b12c6` - feat: migrate rate limiting to Redis with in-memory fallback
 
 ### Recent Commits
 ```
+70b12c6 feat: migrate rate limiting to Redis with in-memory fallback
 5c5d185 refactor: update Header/Hero auth checks and fix frontend tests
 4b8bcd8 refactor: replace localStorage token checks with auth.isAuthenticated() in all pages
 c4004ab feat: migrate frontend auth from localStorage JWT to HttpOnly cookies
@@ -88,7 +89,7 @@ f31c7bd security: harden JWT, add refresh tokens, password complexity, CSP, uplo
 
 | Suite | Result |
 |-------|--------|
-| Backend (pytest) | 38 passed ✅ |
+| Backend (pytest) | 41 passed ✅ |
 | Frontend (vitest) | 14 passed ✅ |
 | Frontend build | Succeeds ✅ |
 
